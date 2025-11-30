@@ -35,11 +35,23 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# PWA
-**/public/sw.js
-**/public/workbox-*.js
-**/public/worker-*.js
-**/public/sw.js.map
-**/public/workbox-*.js.map
-**/public/worker-*.js.map
+# PWA (auto-generated)
+public/sw.js
+public/sw.js.map
+public/workbox-*.js
+public/workbox-*.js.map
+public/worker-*.js
+public/worker-*.js.map
+
+# Documentation (keep only README.md)
+*.md
+!README.md
+
+# Source files not needed in repo
+*.png
+!public/icon-*.png
+einstein-icon.png
+
+# Temporary SQL files
+QUICK_*.sql
 
