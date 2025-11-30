@@ -43,15 +43,11 @@ public/workbox-*.js.map
 public/worker-*.js
 public/worker-*.js.map
 
-# Documentation (keep only README.md)
-*.md
-!README.md
-
 # Source files not needed in repo
-*.png
-!public/icon-*.png
 einstein-icon.png
 
-# Temporary SQL files
+# Temporary/development files
 QUICK_*.sql
+*.log
+.DS_Store
 
