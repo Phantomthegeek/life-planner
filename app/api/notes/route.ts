@@ -70,6 +70,7 @@ export async function POST(request: NextRequest) {
         user_id: user.id,
         date,
         content,
+        category: body.category || null,
       })
       .select()
       .single()
@@ -109,6 +110,7 @@ export async function PATCH(request: NextRequest) {
     const updateData: any = {}
     if (content !== undefined) updateData.content = content
     if (date !== undefined) updateData.date = date
+    if (body.category !== undefined) updateData.category = body.category
 
     const { data, error } = await supabase
       .from('notes')
@@ -125,6 +127,42 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json(data)
   } catch (error) {
     console.error('Error updating note:', error)
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const supabase = createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const searchParams = request.nextUrl.searchParams
+    const id = searchParams.get('id')
+
+    if (!id) {
+      return NextResponse.json({ error: 'Note ID is required' }, { status: 400 })
+    }
+
+    const { error } = await supabase
+      .from('notes')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', user.id)
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 400 })
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Error deleting note:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

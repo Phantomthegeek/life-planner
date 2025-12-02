@@ -70,7 +70,7 @@ export function ChatEmptyState({ onPromptClick }: EmptyStateProps) {
         transition={{ delay: 0.2 }}
         className="space-y-2"
       >
-        <h3 className="text-3xl font-bold gradient-text">Start chatting with Einstein!</h3>
+        <h3 className="text-3xl font-bold gradient-text">Start chatting with Arcana!</h3>
         <p className="text-muted-foreground text-lg max-w-md">
           I can help you learn, plan tasks, brainstorm ideas, or just chat about anything!
         </p>

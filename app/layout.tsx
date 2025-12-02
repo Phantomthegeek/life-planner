@@ -72,8 +72,8 @@ export const viewport: Viewport = {
   userScalable: true,
   viewportFit: 'cover',
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#2A2D7C' }, // Deep Indigo
-    { media: '(prefers-color-scheme: dark)', color: '#2A2D7C' },
+    { media: '(prefers-color-scheme: light)', color: '#2A2D7C' }, // Deep Indigo - Arcana primary
+    { media: '(prefers-color-scheme: dark)', color: '#1A1815' }, // Dark background - Arcana dark theme
   ],
 }
 

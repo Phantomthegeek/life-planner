@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { chatWithEinstein, ChatMessage } from '@/lib/ai/chat'
+import { chatWithArcana, ChatMessage } from '@/lib/ai/chat'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get AI response
-    const response = await chatWithEinstein(
+    const response = await chatWithArcana(
       user.id,
       message,
       conversationHistory,

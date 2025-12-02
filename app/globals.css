@@ -48,52 +48,6 @@
     --ring: 212.7 26.8% 83.9%;
   }
 
-  /* Einstein Blueprint Theme */
-  [data-theme="einstein"] {
-    --background: 220 25% 95%; /* #F2F4F8 */
-    --foreground: 220 15% 10%;
-    --card: 0 0% 100%; /* #FFFFFF */
-    --card-foreground: 220 15% 10%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 220 15% 10%;
-    --primary: 214 100% 50%; /* #0066FF */
-    --primary-foreground: 0 0% 100%;
-    --secondary: 192 100% 50%; /* #00CCFF */
-    --secondary-foreground: 220 15% 10%;
-    --muted: 220 20% 92%;
-    --muted-foreground: 220 10% 40%;
-    --accent: 51 100% 50%; /* #FFD700 */
-    --accent-foreground: 220 15% 10%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 220 20% 85%;
-    --input: 220 20% 90%;
-    --ring: 214 100% 50%;
-    --radius: 0.5rem; /* 8px */
-  }
-
-  [data-theme="einstein-dark"] {
-    --background: 220 10% 7%; /* #111418 */
-    --foreground: 220 15% 95%;
-    --card: 220 12% 10%;
-    --card-foreground: 220 15% 95%;
-    --popover: 220 12% 10%;
-    --popover-foreground: 220 15% 95%;
-    --primary: 214 100% 60%; /* Lighter blue for dark mode */
-    --primary-foreground: 0 0% 100%;
-    --secondary: 192 100% 60%; /* Lighter cyan for dark mode */
-    --secondary-foreground: 220 15% 10%;
-    --muted: 220 12% 15%;
-    --muted-foreground: 220 10% 65%;
-    --accent: 51 100% 60%; /* Lighter gold for dark mode */
-    --accent-foreground: 220 15% 10%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 220 12% 18%;
-    --input: 220 12% 15%;
-    --ring: 214 100% 60%;
-    --radius: 0.5rem; /* 8px */
-  }
 
   /* ============================================
      THEME 1: NEO FOCUS
@@ -558,71 +512,6 @@
     @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
   }
 
-  /* Einstein Blueprint Theme Styles */
-  [data-theme="einstein"],
-  [data-theme="einstein-dark"] {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
-  }
-
-  [data-theme="einstein"] {
-    background: linear-gradient(135deg, #F2F4F8 0%, #FFFFFF 100%);
-  }
-
-  [data-theme="einstein-dark"] {
-    background: linear-gradient(135deg, #111418 0%, #1a1f24 100%);
-  }
-
-  /* Geometric accents */
-  [data-theme="einstein"] .geometric-bg,
-  [data-theme="einstein-dark"] .geometric-bg {
-    background-image: 
-      radial-gradient(circle at 20% 50%, rgba(0, 102, 255, 0.03) 0%, transparent 50%),
-      radial-gradient(circle at 80% 80%, rgba(0, 204, 255, 0.03) 0%, transparent 50%);
-  }
-
-  /* Sharp 8px corners for Einstein theme */
-  [data-theme="einstein"],
-  [data-theme="einstein-dark"] {
-    --radius: 0.5rem; /* 8px */
-  }
-
-  [data-theme="einstein"] button,
-  [data-theme="einstein"] input,
-  [data-theme="einstein"] select,
-  [data-theme="einstein"] textarea,
-  [data-theme="einstein"] [role="button"],
-  [data-theme="einstein"] [class*="rounded"],
-  [data-theme="einstein-dark"] button,
-  [data-theme="einstein-dark"] input,
-  [data-theme="einstein-dark"] select,
-  [data-theme="einstein-dark"] textarea,
-  [data-theme="einstein-dark"] [role="button"],
-  [data-theme="einstein-dark"] [class*="rounded"] {
-    border-radius: 8px !important;
-  }
-
-  /* Enhanced typography for Einstein theme */
-  [data-theme="einstein"] h1,
-  [data-theme="einstein"] h2,
-  [data-theme="einstein"] h3,
-  [data-theme="einstein-dark"] h1,
-  [data-theme="einstein-dark"] h2,
-  [data-theme="einstein-dark"] h3 {
-    font-weight: 600;
-    letter-spacing: -0.02em;
-  }
-
-  /* Subtle animations */
-  [data-theme="einstein"] button,
-  [data-theme="einstein-dark"] button {
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  [data-theme="einstein"] button:hover,
-  [data-theme="einstein-dark"] button:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 102, 255, 0.15);
-  }
 }
 
 /* Modern design enhancements */

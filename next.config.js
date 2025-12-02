@@ -3,6 +3,8 @@ const withPWA = require('next-pwa')({
   register: true,
   skipWaiting: true,
   disable: process.env.NODE_ENV === 'development',
+  sw: 'sw.js',
+  swSrc: undefined, // Use generated service worker
   runtimeCaching: [
     {
       urlPattern: /^https?.*/,
@@ -13,6 +15,7 @@ const withPWA = require('next-pwa')({
           maxEntries: 200,
           maxAgeSeconds: 24 * 60 * 60, // 24 hours
         },
+        networkTimeoutSeconds: 10,
       },
     },
     {
@@ -27,14 +30,30 @@ const withPWA = require('next-pwa')({
       },
     },
     {
-      urlPattern: /\.(?:js|css)$/,
+      urlPattern: /\.(?:js|css|woff|woff2|ttf|eot)$/,
       handler: 'StaleWhileRevalidate',
       options: {
         cacheName: 'static-resources',
+        expiration: {
+          maxEntries: 100,
+          maxAgeSeconds: 7 * 24 * 60 * 60, // 7 days
+        },
+      },
+    },
+    {
+      urlPattern: /^https:\/\/.*\.supabase\.co\/.*/,
+      handler: 'NetworkFirst',
+      options: {
+        cacheName: 'api-cache',
+        expiration: {
+          maxEntries: 50,
+          maxAgeSeconds: 5 * 60, // 5 minutes
+        },
+        networkTimeoutSeconds: 10,
       },
     },
   ],
-  buildExcludes: [/middleware-manifest\.json$/],
+  buildExcludes: [/middleware-manifest\.json$/, /_buildManifest\.js$/],
   publicExcludes: ['!noprecache/**/*'],
 });
 

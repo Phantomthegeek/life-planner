@@ -6,22 +6,34 @@ import { Button } from '@/components/ui/button'
 import { ArrowLeft, Clock } from 'lucide-react'
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
-import { useTaskStore } from '@/stores/use-task-store'
 import { formatDate } from '@/lib/utils'
 
+// Flow Mode / Focus page - Pomodoro timer for focused work sessions
+// Fetches today's tasks directly from API instead of using store
 export default function FocusPage() {
-  const { tasks, getTasksByDate } = useTaskStore()
   const [todayTasks, setTodayTasks] = useState<any[]>([])
   const [selectedTask, setSelectedTask] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    // Fetch today's tasks from API
     const today = formatDate(new Date())
-    const todayTasksList = getTasksByDate(today).filter((t) => !t.done)
-    setTodayTasks(todayTasksList)
-    if (todayTasksList.length > 0 && !selectedTask) {
-      setSelectedTask(todayTasksList[0].id)
-    }
-  }, [tasks, getTasksByDate, selectedTask])
+    fetch(`/api/tasks?date=${today}`)
+      .then((res) => res.json())
+      .then((data) => {
+        const incomplete = Array.isArray(data) ? data.filter((t: any) => !t.done) : []
+        setTodayTasks(incomplete)
+        if (incomplete.length > 0 && !selectedTask) {
+          setSelectedTask(incomplete[0].id)
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to load tasks:', err)
+      })
+      .finally(() => {
+        setLoading(false)
+      })
+  }, [selectedTask])
 
   const currentTask = todayTasks.find((t) => t.id === selectedTask)
 
@@ -34,7 +46,7 @@ export default function FocusPage() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Focus Mode</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Flow Mode</h1>
           <p className="text-muted-foreground">
             Stay focused with the Pomodoro technique.
           </p>
@@ -59,9 +71,11 @@ export default function FocusPage() {
             <CardDescription>Select a task to focus on</CardDescription>
           </CardHeader>
           <CardContent>
-            {todayTasks.length === 0 ? (
+            {loading ? (
+              <p className="text-center text-muted-foreground py-8">Loading tasks...</p>
+            ) : todayTasks.length === 0 ? (
               <p className="text-center text-muted-foreground py-8">
-                No pending tasks for today. Great job! 🎉
+                No pending tasks for today. Great job!
               </p>
             ) : (
               <div className="space-y-2">
@@ -91,4 +105,3 @@ export default function FocusPage() {
     </div>
   )
 }
-

@@ -1,12 +1,12 @@
 {
   "name": "Arcana - AI Productivity & Life Planner",
   "short_name": "Arcana",
-  "description": "Your personal life planner with AI-powered study coaching, task management, and intelligent learning system",
+  "description": "Your intelligent productivity companion with AI-powered assistance, knowledge management, flow mode, time warp version control, and gamified habit tracking",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#6366f1",
+  "background_color": "#F8F7F4",
+  "theme_color": "#2A2D7C",
   "orientation": "portrait-primary",
   "icons": [
     {
@@ -67,9 +67,9 @@
       "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
     },
     {
-      "name": "Chat",
+      "name": "Chat with Arcana",
       "short_name": "Chat",
-      "description": "Chat with AI",
+      "description": "Chat with AI assistant",
       "url": "/dashboard/chat",
       "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
     },
@@ -78,6 +78,13 @@
       "short_name": "Planner",
       "description": "Plan your tasks",
       "url": "/dashboard/planner",
+      "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Flow Mode",
+      "short_name": "Flow",
+      "description": "Start a focus session",
+      "url": "/dashboard/planner/focus",
       "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
     }
   ],

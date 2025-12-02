@@ -246,7 +246,7 @@ export default function ChatPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           conversation_id: conversationId,
-          title: `Chat with Einstein - ${new Date().toLocaleDateString()}`,
+          title: `Chat with Arcana - ${new Date().toLocaleDateString()}`,
         }),
       })
 
@@ -356,7 +356,7 @@ export default function ChatPage() {
               </motion.div>
               <div className="min-w-0 flex-1">
                 <h1 className="text-2xl md:text-4xl font-bold tracking-tight gradient-text truncate">
-                  Chat with Einstein
+                  Chat with Arcana
                 </h1>
                 <p className="text-muted-foreground text-sm md:text-lg hidden sm:block">
                   Your AI learning mentor and assistant ✨
@@ -446,7 +446,7 @@ export default function ChatPage() {
               onChange={setInput}
               onSubmit={sendMessage}
               loading={loading}
-              placeholder="Ask Einstein anything... (Learning, tasks, or just chat!)"
+              placeholder="Ask Arcana anything... (Learning, tasks, or just chat!)"
               suggestions={suggestions}
               onSuggestionClick={(suggestion) => setInput(suggestion)}
             />

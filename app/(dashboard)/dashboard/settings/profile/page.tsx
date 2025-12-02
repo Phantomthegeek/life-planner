@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useToast } from '@/hooks/use-toast'
 import { createClient } from '@/lib/supabase/client'
-import { Loader2, User, Mail, Calendar, Save, Camera } from 'lucide-react'
+import { Loader2, User, Mail, Calendar, Save, Camera, Clock, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 
 interface UserProfile {
@@ -16,10 +16,10 @@ interface UserProfile {
   email: string
   full_name: string | null
   avatar_url: string | null
-  wake_time: string
-  sleep_time: string
-  work_hours_start: string
-  work_hours_end: string
+  wake_time: string | null
+  sleep_time: string | null
+  work_hours_start: string | null
+  work_hours_end: string | null
   created_at: string
 }
 
@@ -28,6 +28,10 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false)
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [fullName, setFullName] = useState('')
+  const [wakeTime, setWakeTime] = useState('07:00')
+  const [sleepTime, setSleepTime] = useState('23:00')
+  const [workStart, setWorkStart] = useState('09:00')
+  const [workEnd, setWorkEnd] = useState('17:00')
   const { toast } = useToast()
   const supabase = createClient()
 
@@ -38,7 +42,14 @@ export default function ProfilePage() {
   const fetchProfile = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
+      if (!user) {
+        toast({
+          title: 'Error',
+          description: 'Please log in to view your profile',
+          variant: 'destructive',
+        })
+        return
+      }
 
       // Fetch from users table
       const { data, error } = await supabase
@@ -47,11 +58,18 @@ export default function ProfilePage() {
         .eq('id', user.id)
         .single()
 
-      if (error) throw error
+      if (error && error.code !== 'PGRST116') {
+        // PGRST116 is "not found" - we'll create the profile
+        throw error
+      }
 
       if (data) {
         setProfile(data)
         setFullName(data.full_name || '')
+        setWakeTime(data.wake_time || '07:00')
+        setSleepTime(data.sleep_time || '23:00')
+        setWorkStart(data.work_hours_start || '09:00')
+        setWorkEnd(data.work_hours_end || '17:00')
       } else {
         // Create user profile if doesn't exist
         const { data: newUser, error: createError } = await supabase
@@ -59,14 +77,25 @@ export default function ProfilePage() {
           .insert({
             id: user.id,
             email: user.email || '',
+            full_name: null,
+            wake_time: '07:00',
+            sleep_time: '23:00',
+            work_hours_start: '09:00',
+            work_hours_end: '17:00',
           })
           .select()
           .single()
 
         if (createError) throw createError
         setProfile(newUser)
+        setFullName(newUser.full_name || '')
+        setWakeTime(newUser.wake_time || '07:00')
+        setSleepTime(newUser.sleep_time || '23:00')
+        setWorkStart(newUser.work_hours_start || '09:00')
+        setWorkEnd(newUser.work_hours_end || '17:00')
       }
     } catch (error: any) {
+      console.error('Error fetching profile:', error)
       toast({
         title: 'Error',
         description: error.message || 'Failed to load profile',
@@ -82,12 +111,19 @@ export default function ProfilePage() {
 
     setSaving(true)
     try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Not authenticated')
+
       const { error } = await supabase
         .from('users')
         .update({
-          full_name: fullName || null,
+          full_name: fullName.trim() || null,
+          wake_time: wakeTime,
+          sleep_time: sleepTime,
+          work_hours_start: workStart,
+          work_hours_end: workEnd,
         })
-        .eq('id', profile.id)
+        .eq('id', user.id)
 
       if (error) throw error
 
@@ -96,6 +132,7 @@ export default function ProfilePage() {
         description: 'Your profile has been updated successfully.',
       })
 
+      // Refresh profile data
       fetchProfile()
     } catch (error: any) {
       toast({
@@ -109,7 +146,7 @@ export default function ProfilePage() {
   }
 
   const getInitials = (name: string | null, email: string) => {
-    if (name) {
+    if (name && name.trim()) {
       return name
         .split(' ')
         .map((n) => n[0])
@@ -131,24 +168,38 @@ export default function ProfilePage() {
   if (!profile) {
     return (
       <div className="text-center py-20">
-        <h2 className="text-2xl font-bold">Profile Not Found</h2>
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Profile Not Found</h2>
         <p className="text-muted-foreground">Unable to load your profile.</p>
+        <Link href="/dashboard/settings">
+          <Button variant="outline" className="mt-4">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Settings
+          </Button>
+        </Link>
       </div>
     )
   }
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight gradient-text">Profile</h1>
-        <p className="text-muted-foreground">
-          Manage your account settings and preferences.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100">Profile</h1>
+          <p className="text-muted-foreground mt-1">
+            Manage your account settings and personal information
+          </p>
+        </div>
+        <Link href="/dashboard/settings">
+          <Button variant="outline">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Settings
+          </Button>
+        </Link>
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
         {/* Profile Info */}
-        <Card className="md:col-span-2 glow-card hover-lift">
+        <Card className="md:col-span-2">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <User className="h-5 w-5" />
@@ -168,12 +219,12 @@ export default function ProfilePage() {
                 </AvatarFallback>
               </Avatar>
               <div>
-                <Button variant="outline" size="sm" className="shimmer-button">
+                <Button variant="outline" size="sm" disabled>
                   <Camera className="mr-2 h-4 w-4" />
                   Change Photo
                 </Button>
                 <p className="text-xs text-muted-foreground mt-2">
-                  Upload a profile picture (coming soon)
+                  Profile picture upload coming soon
                 </p>
               </div>
             </div>
@@ -190,7 +241,7 @@ export default function ProfilePage() {
                   type="email"
                   value={profile.email}
                   disabled
-                  className="bg-muted"
+                  className="bg-muted dark:bg-gray-800"
                 />
                 <p className="text-xs text-muted-foreground">
                   Email cannot be changed. Contact support if needed.
@@ -207,7 +258,11 @@ export default function ProfilePage() {
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   placeholder="Enter your full name"
+                  className="dark:bg-gray-800"
                 />
+                <p className="text-xs text-muted-foreground">
+                  This name will be used in greetings and throughout the app
+                </p>
               </div>
 
               <div className="space-y-2">
@@ -222,7 +277,7 @@ export default function ProfilePage() {
                     day: 'numeric',
                   })}
                   disabled
-                  className="bg-muted"
+                  className="bg-muted dark:bg-gray-800"
                 />
               </div>
             </div>
@@ -230,7 +285,7 @@ export default function ProfilePage() {
             <Button
               onClick={handleSave}
               disabled={saving}
-              className="w-full shimmer-button"
+              className="w-full"
             >
               {saving ? (
                 <>
@@ -247,33 +302,101 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
 
-        {/* Account Stats */}
-        <Card className="glow-card hover-lift vibrant-bg">
+        {/* Schedule Settings */}
+        <Card>
           <CardHeader>
-            <CardTitle>Account Info</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5" />
+              Daily Schedule
+            </CardTitle>
+            <CardDescription>
+              Set your daily routine preferences
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
+              <Label htmlFor="wake_time">Wake Time</Label>
+              <Input
+                id="wake_time"
+                type="time"
+                value={wakeTime}
+                onChange={(e) => setWakeTime(e.target.value)}
+                className="dark:bg-gray-800"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="sleep_time">Sleep Time</Label>
+              <Input
+                id="sleep_time"
+                type="time"
+                value={sleepTime}
+                onChange={(e) => setSleepTime(e.target.value)}
+                className="dark:bg-gray-800"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="work_start">Work Start</Label>
+              <Input
+                id="work_start"
+                type="time"
+                value={workStart}
+                onChange={(e) => setWorkStart(e.target.value)}
+                className="dark:bg-gray-800"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="work_end">Work End</Label>
+              <Input
+                id="work_end"
+                type="time"
+                value={workEnd}
+                onChange={(e) => setWorkEnd(e.target.value)}
+                className="dark:bg-gray-800"
+              />
+            </div>
+            <Button
+              onClick={handleSave}
+              disabled={saving}
+              variant="outline"
+              className="w-full"
+            >
+              {saving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="mr-2 h-4 w-4" />
+                  Save Schedule
+                </>
+              )}
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Account Info Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Account Information</CardTitle>
+          <CardDescription>Your account details and statistics</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
               <p className="text-sm font-medium text-muted-foreground">User ID</p>
-              <p className="text-xs font-mono bg-muted p-2 rounded break-all">
+              <p className="text-xs font-mono bg-muted dark:bg-gray-800 p-2 rounded break-all">
                 {profile.id}
               </p>
             </div>
             <div className="space-y-2">
               <p className="text-sm font-medium text-muted-foreground">Email Verified</p>
-              <p className="text-sm">✓ Verified</p>
+              <p className="text-sm text-green-600 dark:text-green-400">✓ Verified</p>
             </div>
-            <div className="pt-4 border-t">
-              <Link href="/dashboard/settings">
-                <Button variant="outline" className="w-full">
-                  Back to Settings
-                </Button>
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }
-

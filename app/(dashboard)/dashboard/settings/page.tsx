@@ -153,7 +153,10 @@ export default function SettingsPage() {
         .eq('id', user.id)
         .single()
 
-      if (error) throw error
+      if (error && error.code !== 'PGRST116') {
+        // PGRST116 is "not found" - we'll create the profile
+        throw error
+      }
 
       if (data) {
         const settingsData = data as any
@@ -165,6 +168,34 @@ export default function SettingsPage() {
           work_hours_end: settingsData.work_hours_end || '17:00',
           full_name: settingsData.full_name,
         }))
+      } else {
+        // Create user profile if doesn't exist
+        const { data: newUser, error: createError } = await supabase
+          .from('users')
+          .insert({
+            id: user.id,
+            email: user.email || '',
+            full_name: null,
+            wake_time: '07:00',
+            sleep_time: '23:00',
+            work_hours_start: '09:00',
+            work_hours_end: '17:00',
+          })
+          .select()
+          .single()
+
+        if (createError) {
+          console.error('Error creating user profile:', createError)
+        } else if (newUser) {
+          setSettings(prev => ({
+            ...prev,
+            wake_time: newUser.wake_time || '07:00',
+            sleep_time: newUser.sleep_time || '23:00',
+            work_hours_start: newUser.work_hours_start || '09:00',
+            work_hours_end: newUser.work_hours_end || '17:00',
+            full_name: newUser.full_name,
+          }))
+        }
       }
     } catch (error: any) {
       console.error('Error fetching settings:', error)
@@ -179,17 +210,42 @@ export default function SettingsPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not authenticated')
 
-      // Save to database
-      const { error } = await supabase
+      // Check if user exists, create if not
+      const { data: existingUser } = await supabase
         .from('users')
-        .update({
-          wake_time: settings.wake_time,
-          sleep_time: settings.sleep_time,
-          work_hours_start: settings.work_hours_start,
-          work_hours_end: settings.work_hours_end,
-          full_name: settings.full_name,
-        })
+        .select('id')
         .eq('id', user.id)
+        .single()
+
+      let error
+      if (existingUser) {
+        // Update existing user
+        const result = await supabase
+          .from('users')
+          .update({
+            wake_time: settings.wake_time,
+            sleep_time: settings.sleep_time,
+            work_hours_start: settings.work_hours_start,
+            work_hours_end: settings.work_hours_end,
+            full_name: settings.full_name?.trim() || null,
+          })
+          .eq('id', user.id)
+        error = result.error
+      } else {
+        // Create new user profile
+        const result = await supabase
+          .from('users')
+          .insert({
+            id: user.id,
+            email: user.email || '',
+            full_name: settings.full_name?.trim() || null,
+            wake_time: settings.wake_time,
+            sleep_time: settings.sleep_time,
+            work_hours_start: settings.work_hours_start,
+            work_hours_end: settings.work_hours_end,
+          })
+        error = result.error
+      }
 
       if (error) throw error
 
@@ -729,8 +785,12 @@ export default function SettingsPage() {
                     onChange={(e) =>
                       setSettings({ ...settings, full_name: e.target.value })
                     }
-                    placeholder="Your name"
+                    placeholder="Enter your full name"
+                    className="dark:bg-gray-800"
                   />
+                  <p className="text-xs text-muted-foreground">
+                    This name will appear in greetings and throughout the app
+                  </p>
                 </div>
                 <Link href="/dashboard/settings/profile">
                   <Button variant="outline" className="w-full">

@@ -22,7 +22,7 @@ export function ChatInput({
   onChange,
   onSubmit,
   loading,
-  placeholder = "Ask Einstein anything...",
+  placeholder = "Ask Arcana anything...",
   suggestions = [],
   onSuggestionClick,
 }: ChatInputProps) {

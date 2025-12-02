@@ -35,7 +35,7 @@ function getOpenAIClient(): OpenAI {
   return new OpenAI({ apiKey })
 }
 
-export async function chatWithEinstein(
+export async function chatWithArcana(
   userId: string,
   message: string,
   conversationHistory: ChatMessage[] = [],
@@ -167,7 +167,7 @@ User Context:
       should_save_to_notes: shouldSaveToNotes,
     }
   } catch (error: any) {
-    console.error('Error in chat with Einstein:', error)
+    console.error('Error in chat with Arcana:', error)
     
     if (error?.message?.includes('API key')) {
       throw new Error('OpenAI API key is invalid or missing.')
