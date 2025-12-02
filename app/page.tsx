@@ -1,13 +1,21 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 
-export default async function HomePage() {
-  const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+export const dynamic = 'force-dynamic'
 
-  if (user) {
-    redirect('/dashboard')
-  } else {
+export default async function HomePage() {
+  try {
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (user) {
+      redirect('/dashboard')
+    } else {
+      redirect('/login')
+    }
+  } catch (error) {
+    // If Supabase is not configured, redirect to login
+    console.error('Error checking auth:', error)
     redirect('/login')
   }
 }

@@ -11,6 +11,7 @@ import { PWAHead } from '@/components/pwa/pwa-head'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://life-planner.vercel.app'),
   title: 'Little Einstein - Life Planner & AI Study Coach',
   description: 'Your personal life planner with AI-powered study coaching, task management, and intelligent learning system',
   manifest: '/manifest.json',
@@ -27,11 +28,20 @@ export const metadata: Metadata = {
     siteName: 'Little Einstein',
     title: 'Little Einstein - Life Planner & AI Study Coach',
     description: 'Your personal life planner with AI-powered study coaching',
+    images: [
+      {
+        url: '/icon-512x512.png',
+        width: 512,
+        height: 512,
+        alt: 'Little Einstein',
+      },
+    ],
   },
   twitter: {
     card: 'summary',
     title: 'Little Einstein',
     description: 'Your personal life planner with AI-powered study coaching',
+    images: ['/icon-512x512.png'],
   },
   icons: {
     icon: [
