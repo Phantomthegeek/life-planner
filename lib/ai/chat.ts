@@ -26,13 +26,14 @@ export interface ChatResponse {
   should_save_to_notes?: boolean
 }
 
-if (!process.env.OPENAI_API_KEY) {
-  console.error('⚠️ OPENAI_API_KEY is not set')
+// Lazy initialization to avoid build-time errors
+function getOpenAIClient(): OpenAI {
+  const apiKey = process.env.OPENAI_API_KEY
+  if (!apiKey) {
+    throw new Error('OPENAI_API_KEY is not configured')
+  }
+  return new OpenAI({ apiKey })
 }
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-})
 
 export async function chatWithEinstein(
   userId: string,
@@ -137,6 +138,7 @@ User Context:
   }
 
   try {
+    const openai = getOpenAIClient()
     const completion = await openai.chat.completions.create({
       model: 'gpt-3.5-turbo',
       messages: messages as any,

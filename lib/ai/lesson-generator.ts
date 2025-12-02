@@ -5,9 +5,14 @@
 
 import OpenAI from 'openai'
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-})
+// Lazy initialization to avoid build-time errors
+function getOpenAIClient(): OpenAI {
+  const apiKey = process.env.OPENAI_API_KEY
+  if (!apiKey) {
+    throw new Error('OPENAI_API_KEY is not configured')
+  }
+  return new OpenAI({ apiKey })
+}
 
 export interface LessonContent {
   intro: {
@@ -118,6 +123,7 @@ Return ONLY valid JSON in this exact structure:
 }`
 
   try {
+    const openai = getOpenAIClient()
     const completion = await openai.chat.completions.create({
       model: 'gpt-3.5-turbo',
       messages: [
@@ -200,6 +206,7 @@ Return ONLY valid JSON in this structure:
 }`
 
   try {
+    const openai = getOpenAIClient()
     const completion = await openai.chat.completions.create({
       model: 'gpt-3.5-turbo',
       messages: [

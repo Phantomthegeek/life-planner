@@ -3,14 +3,14 @@ import { AICoachResponse, Task, Habit } from '@/lib/types'
 import { Database } from '@/lib/supabase/database.types'
 import { buildContextBundle, AIContextBundle } from './context-builder'
 
-// Check if API key is set
-if (!process.env.OPENAI_API_KEY) {
-  console.error('⚠️ OPENAI_API_KEY is not set in environment variables')
+// Lazy initialization to avoid build-time errors
+function getOpenAIClient(): OpenAI {
+  const apiKey = process.env.OPENAI_API_KEY
+  if (!apiKey) {
+    throw new Error('OPENAI_API_KEY is not configured')
+  }
+  return new OpenAI({ apiKey })
 }
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-})
 
 interface UserPreferences {
   wake_time: string
@@ -112,6 +112,7 @@ ${mode === 'intense' ? 'Make this day more challenging - pack in more study time
 Create an optimized schedule that fits within my preferences and includes time for my goals.`
 
   try {
+    const openai = getOpenAIClient()
     const completion = await openai.chat.completions.create({
       model: 'gpt-3.5-turbo',
       messages: [
