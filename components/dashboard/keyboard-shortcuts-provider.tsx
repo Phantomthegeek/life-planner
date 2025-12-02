@@ -56,7 +56,7 @@ export function KeyboardShortcutsProvider() {
           key: 'c',
           ctrl: true,
           action: () => {},
-          description: 'Go to certifications',
+          description: 'Go to courses',
           category: 'Navigation',
         },
         {

@@ -27,7 +27,7 @@ const navItems = [
   { href: '/dashboard/planner', label: 'Planner', icon: Calendar },
   { href: '/dashboard/planner/timetable', label: 'Timetable', icon: Calendar },
   { href: '/dashboard/projects', label: 'Projects', icon: FolderOpen },
-  { href: '/dashboard/certifications', label: 'Certifications', icon: BookOpen },
+  { href: '/dashboard/certifications', label: 'Courses', icon: BookOpen },
   { href: '/dashboard/habits', label: 'Habits', icon: Target },
   { href: '/dashboard/notes', label: 'Notes', icon: FileText },
   { href: '/dashboard/coach', label: 'AI Coach', icon: Brain },

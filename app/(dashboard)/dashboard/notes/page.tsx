@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { Plus, FileText, Search, Calendar } from 'lucide-react'
+import { Plus, FileText, Search, Calendar, Brain, Sparkles, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/hooks/use-toast'
 import { formatDateToISO } from '@/lib/utils'
@@ -32,6 +32,9 @@ export default function NotesPage() {
   const [noteContent, setNoteContent] = useState('')
   const [noteDate, setNoteDate] = useState(formatDateToISO(new Date()))
   const [noteCategory, setNoteCategory] = useState('Personal')
+  const [summarizingNoteId, setSummarizingNoteId] = useState<string | null>(null)
+  const [summary, setSummary] = useState<any>(null)
+  const [showSummary, setShowSummary] = useState<string | null>(null)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -147,6 +150,38 @@ export default function NotesPage() {
         description: error.message || 'Failed to delete note',
         variant: 'destructive',
       })
+    }
+  }
+
+  const handleSummarizeNote = async (note: Note) => {
+    setSummarizingNoteId(note.id)
+    try {
+      const response = await fetch('/api/ai/notes/summarize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          note_id: note.id,
+          content: note.content,
+        }),
+      })
+
+      if (!response.ok) throw new Error('Failed to summarize note')
+
+      const summaryData = await response.json()
+      setSummary(summaryData)
+      setShowSummary(note.id)
+      toast({
+        title: 'Summary Generated',
+        description: 'AI has analyzed your note',
+      })
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to summarize note',
+        variant: 'destructive',
+      })
+    } finally {
+      setSummarizingNoteId(null)
     }
   }
 
@@ -297,7 +332,52 @@ export default function NotesPage() {
                 <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-6 flex-1">
                   {note.content}
                 </p>
+                {showSummary === note.id && summary && (
+                  <div className="mt-3 p-3 bg-primary/5 dark:bg-primary/10 rounded-lg border border-primary/20 space-y-2">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Sparkles className="h-4 w-4 text-primary" />
+                      <span className="text-xs font-semibold text-primary">AI Summary</span>
+                    </div>
+                    <p className="text-xs text-gray-700 dark:text-gray-300">{summary.summary}</p>
+                    {summary.keyPoints && summary.keyPoints.length > 0 && (
+                      <div className="mt-2">
+                        <p className="text-xs font-semibold mb-1">Key Points:</p>
+                        <ul className="text-xs text-gray-600 dark:text-gray-400 list-disc list-inside space-y-0.5">
+                          {summary.keyPoints.slice(0, 3).map((point: string, idx: number) => (
+                            <li key={idx}>{point}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {summary.actionItems && summary.actionItems.length > 0 && (
+                      <div className="mt-2">
+                        <p className="text-xs font-semibold mb-1">Action Items:</p>
+                        <ul className="text-xs text-gray-600 dark:text-gray-400 list-disc list-inside space-y-0.5">
+                          {summary.actionItems.slice(0, 2).map((item: string, idx: number) => (
+                            <li key={idx}>{item}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
                 <div className="flex gap-2 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleSummarizeNote(note)
+                    }}
+                    disabled={summarizingNoteId === note.id}
+                  >
+                    {summarizingNoteId === note.id ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Brain className="h-3 w-3" />
+                    )}
+                    {summarizingNoteId === note.id ? 'Summarizing...' : 'AI Summarize'}
+                  </Button>
                   <Button
                     variant="ghost"
                     size="sm"

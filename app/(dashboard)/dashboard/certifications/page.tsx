@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
-import { BookOpen, Calendar, Loader2, Plus, Brain, Sparkles, Search } from 'lucide-react'
+import { BookOpen, Calendar, Loader2, Plus, Brain, Sparkles, Search, Trash2 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import Link from 'next/link'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
@@ -72,14 +72,44 @@ export default function CertificationsPage() {
 
       toast({
         title: 'Success',
-        description: 'Certification started!',
+        description: 'Course started!',
       })
 
       fetchCertifications()
     } catch (error: any) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to start certification',
+        description: error.message || 'Failed to start course',
+        variant: 'destructive',
+      })
+    }
+  }
+
+  const handleDeleteCertification = async (certId: string, certName: string) => {
+    if (!confirm(`Are you sure you want to delete "${certName}"? This will also delete all associated progress and modules.`)) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/certifications?id=${certId}`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}))
+        throw new Error(error.error || 'Failed to delete course')
+      }
+
+      toast({
+        title: 'Success',
+        description: 'Course deleted successfully',
+      })
+
+      fetchCertifications()
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to delete course',
         variant: 'destructive',
       })
     }
@@ -97,7 +127,7 @@ export default function CertificationsPage() {
     if (!certName.trim()) {
       toast({
         title: 'Error',
-        description: 'Please enter a certification name',
+        description: 'Please enter a course name',
         variant: 'destructive',
       })
       return
@@ -132,7 +162,7 @@ export default function CertificationsPage() {
 
       toast({
         title: 'Success!',
-        description: `Certification "${certData.name}" added successfully!`,
+        description: `Course "${certData.name}" added successfully!`,
       })
 
       setCertName('')
@@ -141,7 +171,7 @@ export default function CertificationsPage() {
     } catch (error: any) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to add certification',
+        description: error.message || 'Failed to add course',
         variant: 'destructive',
       })
     } finally {
@@ -174,31 +204,31 @@ export default function CertificationsPage() {
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Certifications</h1>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Courses</h1>
           <p className="text-muted-foreground text-sm md:text-base">
-            Track your IT certification progress and study plans.
+            Track your course progress and study plans.
           </p>
         </div>
         <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
           <DialogTrigger asChild>
             <Button size="sm" className="w-full sm:w-auto">
               <Plus className="mr-2 h-4 w-4" />
-              Add Certification
+              Add Course
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Sparkles className="h-5 w-5 text-primary" />
-                AI-Powered Certification Adder
+                AI-Powered Course Adder
               </DialogTitle>
               <DialogDescription>
-                Enter a certification name and AI will generate all the details for you!
+                Enter a course name and AI will generate all the details for you!
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="cert-name">Certification Name</Label>
+                <Label htmlFor="cert-name">Course Name</Label>
                 <Input
                   id="cert-name"
                   placeholder="e.g., AWS Solutions Architect, Cisco CCNA"
@@ -227,7 +257,7 @@ export default function CertificationsPage() {
                 ) : (
                   <>
                     <Brain className="mr-2 h-4 w-4" />
-                    Generate & Add Certification
+                    Generate & Add Course
                   </>
                 )}
               </Button>
@@ -240,7 +270,7 @@ export default function CertificationsPage() {
       <div className="relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Search certifications..."
+          placeholder="Search courses..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="pl-10"
@@ -289,11 +319,21 @@ export default function CertificationsPage() {
                         )}
                       </div>
                     )}
-                    <Link href={`/dashboard/certifications/${cert.id}`}>
-                      <Button className="w-full" variant="outline">
-                        View Details
+                    <div className="flex gap-2">
+                      <Link href={`/dashboard/certifications/${cert.id}`} className="flex-1">
+                        <Button className="w-full" variant="outline">
+                          View Details
+                        </Button>
+                      </Link>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDeleteCertification(cert.id, cert.name)}
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      >
+                        <Trash2 className="h-4 w-4" />
                       </Button>
-                    </Link>
+                    </div>
                   </CardContent>
                 </Card>
               )
@@ -304,14 +344,14 @@ export default function CertificationsPage() {
 
       <div className="space-y-4">
         <h2 className="text-2xl font-semibold">
-          {activeCerts.length > 0 ? 'Available Certifications' : 'Certifications'}
+          {activeCerts.length > 0 ? 'Available Courses' : 'Courses'}
         </h2>
         {availableCerts.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
               <BookOpen className="h-12 w-12 text-muted-foreground mb-4" />
               <p className="text-muted-foreground text-center">
-                No certifications available. Check back later!
+                No courses available. Check back later!
               </p>
             </CardContent>
           </Card>
@@ -326,13 +366,23 @@ export default function CertificationsPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Button
-                    className="w-full"
-                    onClick={() => handleStartCertification(cert.id)}
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    Start Certification
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      className="flex-1"
+                      onClick={() => handleStartCertification(cert.id)}
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Start Course
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDeleteCertification(cert.id, cert.name)}
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ))}

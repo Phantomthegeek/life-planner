@@ -27,7 +27,7 @@ const primaryNavItems = [
   { href: '/dashboard/notes', label: 'Notes', icon: FileText },
   { href: '/dashboard/planner', label: 'Tasks', icon: CheckSquare },
   { href: '/dashboard/planner/timetable', label: 'Calendar', icon: Calendar },
-  { href: '/dashboard/certifications', label: 'Certifications', icon: BookOpen },
+  { href: '/dashboard/certifications', label: 'Courses', icon: BookOpen },
   { href: '/dashboard/habits', label: 'Habits', icon: Heart },
 ]
 

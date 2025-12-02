@@ -881,7 +881,7 @@ export default function SettingsPage() {
                   </Button>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Export all your tasks, habits, notes, and certifications as JSON or CSV.
+                  Export all your tasks, habits, notes, and courses as JSON or CSV.
                 </p>
               </CardContent>
             </Card>

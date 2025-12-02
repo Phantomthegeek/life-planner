@@ -117,3 +117,78 @@ export async function POST(request: NextRequest) {
   }
 }
 
+export async function DELETE(request: NextRequest) {
+  try {
+    const supabase = createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const searchParams = request.nextUrl.searchParams
+    const certId = searchParams.get('id')
+
+    if (!certId) {
+      return NextResponse.json(
+        { error: 'Certification ID is required' },
+        { status: 400 }
+      )
+    }
+
+    // First, delete all related progress records
+    const { error: progressError } = await supabase
+      .from('user_cert_progress')
+      .delete()
+      .eq('cert_id', certId)
+
+    if (progressError) {
+      console.error('Error deleting progress:', progressError)
+      // Continue even if progress deletion fails
+    }
+
+    // Delete all related modules and lessons
+    const { data: modules } = await supabase
+      .from('cert_modules')
+      .select('id')
+      .eq('cert_id', certId)
+
+    if (modules && modules.length > 0) {
+      const moduleIds = modules.map((m) => m.id)
+      
+      // Delete lessons
+      await supabase
+        .from('cert_lessons')
+        .delete()
+        .in('module_id', moduleIds)
+
+      // Delete modules
+      await supabase
+        .from('cert_modules')
+        .delete()
+        .eq('cert_id', certId)
+    }
+
+    // Finally, delete the certification itself
+    const { error: deleteError } = await supabase
+      .from('certifications')
+      .delete()
+      .eq('id', certId)
+
+    if (deleteError) {
+      return NextResponse.json(
+        { error: deleteError.message },
+        { status: 400 }
+      )
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Error deleting certification:', error)
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
+
