@@ -17,23 +17,28 @@ export default function FocusPage() {
 
   useEffect(() => {
     // Fetch today's tasks from API
-    const today = formatDate(new Date())
-    fetch(`/api/tasks?date=${today}`)
-      .then((res) => res.json())
-      .then((data) => {
+    const loadTasks = async () => {
+      try {
+        const today = formatDate(new Date())
+        const response = await fetch(`/api/tasks?date=${today}`)
+        if (!response.ok) {
+          throw new Error('Failed to fetch tasks')
+        }
+        const data = await response.json()
         const incomplete = Array.isArray(data) ? data.filter((t: any) => !t.done) : []
         setTodayTasks(incomplete)
         if (incomplete.length > 0 && !selectedTask) {
           setSelectedTask(incomplete[0].id)
         }
-      })
-      .catch((err) => {
+      } catch (err) {
         console.error('Failed to load tasks:', err)
-      })
-      .finally(() => {
+      } finally {
         setLoading(false)
-      })
-  }, [selectedTask])
+      }
+    }
+
+    loadTasks()
+  }, [])
 
   const currentTask = todayTasks.find((t) => t.id === selectedTask)
 

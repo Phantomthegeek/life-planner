@@ -39,3 +39,16 @@ export function subDays(date: Date, days: number): Date {
   result.setDate(result.getDate() - days)
   return result
 }
+
+// Format date to ISO string (YYYY-MM-DD) - alias for formatDate
+// Kept for backward compatibility with existing code
+export function formatDateToISO(date: Date): string {
+  return formatDate(date)
+}
+
+// Format time in seconds to MM:SS format
+export function formatTime(seconds: number): string {
+  const mins = Math.floor(seconds / 60)
+  const secs = seconds % 60
+  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+}
