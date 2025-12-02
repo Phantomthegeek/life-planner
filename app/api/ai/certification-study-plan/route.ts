@@ -8,6 +8,18 @@ export const runtime = 'nodejs'
 
 export async function POST(request: NextRequest) {
   try {
+    // Check environment variables before creating client
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      return NextResponse.json(
+        { 
+          error: 'Server configuration error',
+          message: 'Supabase environment variables are not configured. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in Vercel environment variables.',
+          details: 'See VERCEL_ENV_SETUP.md for setup instructions'
+        },
+        { status: 500 }
+      )
+    }
+
     const supabase = createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
@@ -85,10 +97,26 @@ export async function POST(request: NextRequest) {
     })
 
     return NextResponse.json(studyPlan)
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error generating certification study plan:', error)
+    
+    // Check if it's an environment variable error
+    if (error?.message?.includes('Missing Supabase environment variables')) {
+      return NextResponse.json(
+        { 
+          error: 'Server configuration error',
+          message: error.message,
+          details: 'Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in Vercel environment variables. See VERCEL_ENV_SETUP.md for instructions.'
+        },
+        { status: 500 }
+      )
+    }
+    
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { 
+        error: 'Internal server error',
+        message: error?.message || 'An unexpected error occurred'
+      },
       { status: 500 }
     )
   }
