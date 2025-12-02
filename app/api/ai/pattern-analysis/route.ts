@@ -3,6 +3,9 @@ import { createClient } from '@/lib/supabase/server'
 import { analyzePatterns } from '@/lib/ai/pattern-analysis'
 import { subDays, formatDate } from '@/lib/utils'
 
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 export async function POST(request: NextRequest) {
   try {
     const supabase = createClient()
