@@ -79,7 +79,7 @@ export function CommandPalette({ onQuickAdd, onTemplateSelect }: CommandPaletteP
   const navigation = [
     { id: 'dashboard', label: 'Dashboard', icon: Calendar, href: '/dashboard' },
     { id: 'planner', label: 'Planner', icon: Calendar, href: '/dashboard/planner' },
-    { id: 'certifications', label: 'Certifications', icon: BookOpen, href: '/dashboard/certifications' },
+    { id: 'certifications', label: 'Courses', icon: BookOpen, href: '/dashboard/certifications' },
     { id: 'habits', label: 'Habits', icon: Target, href: '/dashboard/habits' },
     { id: 'notes', label: 'Notes', icon: FileText, href: '/dashboard/notes' },
     { id: 'coach', label: 'AI Coach', icon: Brain, href: '/dashboard/coach' },

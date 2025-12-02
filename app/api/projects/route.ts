@@ -85,3 +85,61 @@ export async function POST(request: NextRequest) {
   }
 }
 
+export async function DELETE(request: NextRequest) {
+  try {
+    const supabase = createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const searchParams = request.nextUrl.searchParams
+    const projectId = searchParams.get('id')
+
+    if (!projectId) {
+      return NextResponse.json(
+        { error: 'Project ID is required' },
+        { status: 400 }
+      )
+    }
+
+    // Verify project belongs to user
+    const { data: project, error: fetchError } = await supabase
+      .from('projects')
+      .select('id')
+      .eq('id', projectId)
+      .eq('user_id', user.id)
+      .single()
+
+    if (fetchError || !project) {
+      return NextResponse.json(
+        { error: 'Project not found' },
+        { status: 404 }
+      )
+    }
+
+    // Delete the project
+    const { error: deleteError } = await supabase
+      .from('projects')
+      .delete()
+      .eq('id', projectId)
+      .eq('user_id', user.id)
+
+    if (deleteError) {
+      return NextResponse.json(
+        { error: deleteError.message },
+        { status: 400 }
+      )
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (error: any) {
+    console.error('Error deleting project:', error)
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
+

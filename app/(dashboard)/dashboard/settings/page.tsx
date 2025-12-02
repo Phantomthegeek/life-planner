@@ -874,7 +874,7 @@ export default function SettingsPage() {
                 <Separator />
                 <div className="space-y-2">
                   <Button variant="outline" className="w-full" asChild>
-                    <Link href="/dashboard/settings/import">
+                    <Link href="/dashboard/settings/data">
                       <Upload className="mr-2 h-4 w-4" />
                       Import Data
                     </Link>
@@ -895,12 +895,11 @@ export default function SettingsPage() {
                 <CardDescription>View available keyboard shortcuts</CardDescription>
               </CardHeader>
               <CardContent>
-                <Link href="/dashboard/settings/shortcuts">
-                  <Button variant="outline" className="w-full">
-                    <Keyboard className="mr-2 h-4 w-4" />
-                    View Shortcuts
-                  </Button>
-                </Link>
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">
+                    Press <kbd className="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700">⌘K</kbd> or <kbd className="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700">Ctrl+K</kbd> to open the command palette with all shortcuts.
+                  </p>
+                </div>
               </CardContent>
             </Card>
 
