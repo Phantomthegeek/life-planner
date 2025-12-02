@@ -10,8 +10,19 @@ import { PWAHead } from '@/components/pwa/pwa-head'
 
 const inter = Inter({ subsets: ['latin'] })
 
+// Get app URL for metadata - use environment variable or fallback
+const getMetadataBase = () => {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://life-planner.vercel.app'
+  // Ensure it's a valid URL
+  try {
+    return new URL(appUrl)
+  } catch {
+    return new URL('https://life-planner.vercel.app')
+  }
+}
+
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://life-planner.vercel.app'),
+  metadataBase: getMetadataBase(),
   title: 'Little Einstein - Life Planner & AI Study Coach',
   description: 'Your personal life planner with AI-powered study coaching, task management, and intelligent learning system',
   manifest: '/manifest.json',

@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
 import { Brain, Loader2 } from 'lucide-react'
+import { getAppUrl } from '@/lib/utils'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -58,9 +59,7 @@ export default function LoginPage() {
         email,
         password,
         options: {
-          emailRedirectTo: typeof window !== 'undefined' 
-            ? `${window.location.origin}/dashboard`
-            : '/dashboard',
+          emailRedirectTo: `${getAppUrl()}/dashboard`,
         },
       })
 
