@@ -23,35 +23,35 @@ const getMetadataBase = () => {
 
 export const metadata: Metadata = {
   metadataBase: getMetadataBase(),
-  title: 'Little Einstein - Life Planner & AI Study Coach',
-  description: 'Your personal life planner with AI-powered study coaching, task management, and intelligent learning system',
+  title: 'Arcana - AI Productivity & Life Planner',
+  description: 'Your intelligent productivity companion with AI-powered assistance, knowledge management, flow mode, time warp version control, and gamified habit tracking',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'Little Einstein',
+    title: 'Arcana',
   },
   formatDetection: {
     telephone: false,
   },
   openGraph: {
     type: 'website',
-    siteName: 'Little Einstein',
-    title: 'Little Einstein - Life Planner & AI Study Coach',
-    description: 'Your personal life planner with AI-powered study coaching',
+    siteName: 'Arcana',
+    title: 'Arcana - AI Productivity & Life Planner',
+    description: 'Your intelligent productivity companion with AI-powered assistance, knowledge management, and flow mode',
     images: [
       {
         url: '/icon-512x512.png',
         width: 512,
         height: 512,
-        alt: 'Little Einstein',
+        alt: 'Arcana',
       },
     ],
   },
   twitter: {
     card: 'summary',
-    title: 'Little Einstein',
-    description: 'Your personal life planner with AI-powered study coaching',
+    title: 'Arcana',
+    description: 'Your intelligent productivity companion with AI-powered assistance',
     images: ['/icon-512x512.png'],
   },
   icons: {
@@ -72,8 +72,8 @@ export const viewport: Viewport = {
   userScalable: true,
   viewportFit: 'cover',
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#6366f1' },
-    { media: '(prefers-color-scheme: dark)', color: '#6366f1' },
+    { media: '(prefers-color-scheme: light)', color: '#2A2D7C' }, // Deep Indigo
+    { media: '(prefers-color-scheme: dark)', color: '#2A2D7C' },
   ],
 }
 

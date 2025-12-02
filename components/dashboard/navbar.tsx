@@ -63,7 +63,7 @@ export function Navbar() {
           <Link href="/dashboard" className="flex items-center gap-2 font-bold group transition-all">
             <Brain className="h-6 w-6 text-primary group-hover:scale-110 transition-transform duration-200" />
             <span className="hidden sm:inline bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-              Little Einstein
+              Arcana
             </span>
           </Link>
 

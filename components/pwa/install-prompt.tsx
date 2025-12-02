@@ -95,7 +95,7 @@ export function InstallPrompt() {
                   <Sparkles className="h-6 w-6 text-primary" />
                 </div>
                 <DialogTitle className="text-xl font-bold gradient-text">
-                  Install Little Einstein
+                  Install Arcana
                 </DialogTitle>
               </motion.div>
               <DialogDescription className="text-base pt-2">

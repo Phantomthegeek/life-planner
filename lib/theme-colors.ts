@@ -192,5 +192,31 @@ export const themeColors = {
     surface: '#0D0D12',
     text: '#FFFFFF',
   },
+  'arcana': {
+    primary: '#2A2D7C', // Deep Indigo
+    secondary: '#00C1B3', // AI Teal
+    accent: '#9C6ADE', // Arcane Purple
+    knowledge: '#FFBD44', // Knowledge Gold
+    focus: '#4D7CFE', // Focus Blue
+    alert: '#FF5252', // Alert Red
+    background: '#F8F7F4', // Surface
+    surface: '#FFFFFF',
+    border: '#E8E6E1',
+    text: '#27241D', // Text Primary
+    textSecondary: '#625D52', // Text Secondary
+  },
+  'arcana-dark': {
+    primary: '#3A3F9C',
+    secondary: '#00E3D3',
+    accent: '#B686ED',
+    knowledge: '#FFD064',
+    focus: '#6D9CFE',
+    alert: '#FF6B6B',
+    background: '#1A1815',
+    surface: '#24221F',
+    border: '#3A3833',
+    text: '#F5F4F1',
+    textSecondary: '#A8A59F',
+  },
 }
 

@@ -166,6 +166,19 @@ const themeOptions: ThemeOption[] = [
       bg: '#0A0A0F',
     },
   },
+  {
+    id: 'arcana',
+    name: 'Arcana',
+    description: 'Mystical, intelligent, magical productivity',
+    mood: 'mystique, intelligence, magical yet professional',
+    hasDarkMode: true,
+    preview: {
+      primary: '#2A2D7C',
+      secondary: '#00C1B3',
+      accent: '#9C6ADE',
+      bg: '#F8F7F4',
+    },
+  },
 ]
 
 interface ThemeSelectorProps {
@@ -189,6 +202,7 @@ export function ThemeSelector({ currentTheme, onThemeChange }: ThemeSelectorProp
     if (currentTheme.includes('minimal-zen')) return 'minimal-zen'
     if (currentTheme.includes('solar-flare')) return 'solar-flare'
     if (currentTheme.includes('neo-noir')) return 'neo-noir'
+    if (currentTheme.includes('arcana')) return 'arcana'
     return 'default'
   }
 

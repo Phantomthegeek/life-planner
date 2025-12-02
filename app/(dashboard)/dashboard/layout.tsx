@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { Navbar } from '@/components/dashboard/navbar'
+import { Sidebar } from '@/components/dashboard/sidebar'
+import { Header } from '@/components/dashboard/header'
 import { Toaster } from '@/components/ui/toaster'
 import { CommandPalette } from '@/components/command-palette'
 import { DashboardLayoutClient } from './layout-client'
@@ -19,12 +20,14 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 relative overflow-hidden animated-dots">
-      <div className="absolute inset-0 vibrant-bg opacity-30 pointer-events-none" />
-      <Navbar />
-      <main className="container mx-auto py-4 md:py-8 px-2 md:px-4 max-w-7xl relative z-10">
-        <div className="fade-in">{children}</div>
-      </main>
+    <div className="min-h-screen bg-gray-50">
+      <Sidebar />
+      <div className="ml-64">
+        <Header />
+        <main className="pt-16 p-6">
+          {children}
+        </main>
+      </div>
       <Toaster />
       <CommandPalette />
       <DashboardLayoutClient />

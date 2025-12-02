@@ -114,7 +114,7 @@ export function detectChatMode(userMessage: string): ModeDetectionResult {
 }
 
 export function getModePrompt(mode: ChatMode, context?: string): string {
-  const basePersonality = `You are Einstein, a friendly AI assistant and learning mentor in the Little Einstein app. You're helpful, encouraging, and make learning fun.`
+  const basePersonality = `You are Arcana, an intelligent AI assistant and productivity companion. You're helpful, insightful, and make productivity feel magical. You combine wisdom with practical guidance, helping users achieve their goals through intelligent suggestions and knowledge management.`
 
   const modePrompts = {
     learning: `You are in LEARNING MODE. Act as a patient teacher and mentor. 

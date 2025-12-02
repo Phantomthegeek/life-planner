@@ -1,6 +1,6 @@
 /**
  * Theme Configuration
- * All available themes for Little Einstein
+ * All available themes for Arcana
  */
 
 export interface ThemeInfo {
@@ -206,6 +206,23 @@ export const themes: ThemeInfo[] = [
       primary: '#1F1F2E',
       secondary: '#9E63FF',
       accent: '#FF3366',
+    },
+  },
+  {
+    id: 'arcana',
+    name: 'Arcana',
+    description: 'Mystical, intelligent, magical productivity',
+    mood: 'mystique, intelligence, magical yet professional',
+    lightId: 'arcana',
+    darkId: 'arcana-dark',
+    primaryColor: '#2A2D7C', // Deep Indigo
+    secondaryColor: '#00C1B3', // AI Teal
+    accentColor: '#9C6ADE', // Arcane Purple
+    preview: {
+      bg: '#F8F7F4', // Surface
+      primary: '#2A2D7C',
+      secondary: '#00C1B3',
+      accent: '#9C6ADE',
     },
   },
 ]

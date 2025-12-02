@@ -1229,6 +1229,62 @@
     animation: gradient-shift 3s ease infinite;
   }
 
+  /* Gradient text animation */
+  @keyframes gradient {
+    0%, 100% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+  }
+
+  .animate-gradient {
+    background-size: 200% 200%;
+    animation: gradient 3s ease infinite;
+  }
+
+  /* Defensive CSS - handles edge cases and content overflow */
+  /* These rules prevent layout breaks from unexpected content */
+  
+  /* Text truncation for long content */
+  .text-truncate-safe {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+  }
+
+  /* Prevent layout shift from images loading */
+  img {
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* Handle very long words/URLs that could break layout */
+  .break-words-safe {
+    word-break: break-word;
+    overflow-wrap: break-word;
+    hyphens: auto;
+  }
+
+  /* Empty state styling - for when widgets have no data */
+  .empty-state {
+    color: rgb(156 163 175); /* gray-400 */
+    font-style: italic;
+    text-align: center;
+    padding: 1rem;
+  }
+
+  /* Arcana-specific spacing system */
+  /* Using 4px base unit - all spacing should be multiples of 4 */
+  /* This creates visual rhythm without being too rigid */
+  .arcana-spacing-xs { gap: 0.25rem; } /* 4px */
+  .arcana-spacing-sm { gap: 0.5rem; }  /* 8px */
+  .arcana-spacing-md { gap: 1rem; }    /* 16px */
+  .arcana-spacing-lg { gap: 1.5rem; }  /* 24px */
+  .arcana-spacing-xl { gap: 2rem; }    /* 32px */
+
   /* Shine animation */
   @keyframes shine {
     0% {
@@ -1269,6 +1325,56 @@
     left: 50% !important;
     transform: translate(-50%, -50%) !important;
     margin: 0 !important;
+  }
+
+  /* ============================================
+     THEME: ARCANA
+     ============================================ */
+  
+  [data-theme="arcana"] {
+    --background: 45 20% 97%; /* #F8F7F4 - Surface */
+    --foreground: 30 15% 15%; /* #27241D - Text Primary */
+    --card: 0 0% 100%;
+    --card-foreground: 30 15% 15%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 30 15% 15%;
+    --primary: 252 45% 32%; /* #2A2D7C - Deep Indigo */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 175 100% 38%; /* #00C1B3 - AI Teal */
+    --secondary-foreground: 0 0% 100%;
+    --muted: 30 10% 85%;
+    --muted-foreground: 30 8% 40%; /* #625D52 - Text Secondary */
+    --accent: 270 60% 70%; /* #9C6ADE - Arcane Purple */
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%; /* #FF5252 - Alert Red */
+    --destructive-foreground: 0 0% 100%;
+    --border: 30 15% 90%; /* #E8E6E1 - Border */
+    --input: 30 15% 90%;
+    --ring: 252 45% 32%;
+    --radius: 0.75rem;
+  }
+  
+  [data-theme="arcana-dark"] {
+    --background: 30 10% 10%; /* #1A1815 */
+    --foreground: 45 15% 95%; /* #F5F4F1 */
+    --card: 30 10% 12%; /* #24221F */
+    --card-foreground: 45 15% 95%;
+    --popover: 30 10% 12%;
+    --popover-foreground: 45 15% 95%;
+    --primary: 252 50% 45%; /* #3A3F9C */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 175 100% 45%; /* #00E3D3 */
+    --secondary-foreground: 0 0% 100%;
+    --muted: 30 8% 20%;
+    --muted-foreground: 30 5% 65%; /* #A8A59F */
+    --accent: 270 65% 75%; /* #B686ED */
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 65%; /* #FF6B6B */
+    --destructive-foreground: 0 0% 100%;
+    --border: 30 8% 25%; /* #3A3833 */
+    --input: 30 8% 20%;
+    --ring: 252 50% 45%;
+    --radius: 0.75rem;
   }
 }
 

@@ -1,16 +1,50 @@
-# Little Einstein - Life Planner & AI Study Coach
+# Arcana - AI Productivity & Life Planner
 
-A comprehensive life planning and AI-powered study coaching application built with Next.js, TypeScript, Tailwind CSS, and Supabase.
+An intelligent productivity companion with AI-powered assistance, knowledge management, flow mode, time warp version control, and gamified habit tracking. Built with Next.js, TypeScript, Tailwind CSS, and Supabase.
 
-## Features
+## Core Features
 
-- 📅 **Daily Planner** - Time-blocking schedule with drag-and-drop calendar
-- 🤖 **AI Life Coach** - Generate optimized daily plans based on your preferences
-- 📚 **Certification Tracker** - Track IT certifications with modules and progress
-- 🎯 **Habits System** - Build and track daily habits with streak tracking
-- 📝 **Notes & Journaling** - Daily notes with AI summarization
-- 🌙 **Dark Mode** - Beautiful dark theme support
-- 📱 **PWA Ready** - Installable app with offline support
+### 🤖 AI Assistant (Arcana)
+- Natural Language Interface: Text and voice communication with AI assistant
+- Context-Aware Suggestions: Intelligent recommendations based on current work
+- Smart Task Extraction: Automatic task creation from conversations and notes
+- Content Generation: AI-powered reports, summaries, and creative content
+- Code Assistant: Code analysis, refactoring, and generation with intelligent suggestions
+
+### 🎯 Flow Mode
+- Focused Work Sessions: Customizable timer with ambient soundscapes
+- Distraction Blocking: Intelligent notification management during focus time
+- Flow Analytics: Productivity tracking and pattern recognition
+- Adaptive Environment: Automatic adjustments based on productivity patterns
+
+### ⏰ Time Warp (Version Control)
+- Comprehensive History: Change tracking across all content
+- Visual Timeline: Intuitive document evolution visualization
+- Semantic Versioning: Automatic identification of significant changes
+- Branching Capability: Alternative version creation for different approaches
+
+### 🔗 Knowledge Management (Arcana Connect)
+- Semantic Search: Natural language query support
+- Bi-Directional Linking: Connection creation between related notes
+- Knowledge Graph: Relationship visualization between ideas and projects
+- AI-Powered Tagging: Automatic content categorization and organization
+- Content Summarization: Concise summary generation for lengthy documents
+
+### 🏆 Habit Tracker & Gamification
+- XP System: Experience points for task completion and habit maintenance
+- Streak Tracking: Consistency visualization with streak counters
+- Personalized Challenges: Custom challenges based on user goals
+- Achievement System: Badges and rewards for productivity milestones
+- Progress Visualization: Performance improvement charts over time
+
+### 📅 Additional Features
+- **Daily Planner** - Time-blocking schedule with drag-and-drop calendar
+- **AI Life Coach** - Generate optimized daily plans based on your preferences
+- **Certification Tracker** - Track IT certifications with modules and progress
+- **Notes & Journaling** - Daily notes with AI summarization
+- **Dark Mode** - Beautiful dark theme support with Arcana theme
+- **PWA Ready** - Installable app with offline support
+- **Multiple Themes** - 12 beautiful themes including the Arcana theme
 
 ## Tech Stack
 
@@ -20,8 +54,8 @@ A comprehensive life planning and AI-powered study coaching application built wi
 - **Database**: Supabase (PostgreSQL)
 - **Authentication**: Supabase Auth
 - **AI**: OpenAI GPT-4
-- **State Management**: Zustand
-- **Data Fetching**: React Query
+- **State Management**: React Hooks
+- **Date Handling**: date-fns
 
 ## Getting Started
 
@@ -90,7 +124,8 @@ See `supabase/migrations/001_initial_schema.sql` for the complete schema.
 │   └── layout.tsx         # Root layout
 ├── components/            # React components
 │   ├── ui/               # shadcn/ui components
-│   └── dashboard/        # Dashboard-specific components
+│   ├── dashboard/        # Dashboard-specific components
+│   └── ...
 ├── lib/                   # Utility libraries
 │   ├── ai/               # AI/OpenAI integration
 │   ├── supabase/         # Supabase client & types
@@ -129,6 +164,15 @@ See `supabase/migrations/001_initial_schema.sql` for the complete schema.
 - Streak tracking
 - Best streak records
 - Visual progress indicators
+- XP and gamification system
+
+### Settings & Customization
+- 12 beautiful themes including Arcana theme
+- Light/Dark/System mode support
+- Notification preferences
+- AI model selection and configuration
+- Language and timezone settings
+- Data export/import functionality
 
 ## Deployment
 
@@ -148,6 +192,17 @@ Make sure to set all environment variables in your deployment platform:
 - `OPENAI_API_KEY`
 - `NEXT_PUBLIC_APP_URL`
 
+See `VERCEL_ENV_SETUP.md` for detailed instructions.
+
+## Design System
+
+Arcana uses a carefully crafted design system with:
+
+- **Color Palette**: Deep Indigo (#2A2D7C), AI Teal (#00C1B3), Arcane Purple (#9C6ADE), Knowledge Gold (#FFBD44), Focus Blue (#4D7CFE)
+- **Typography**: Inter for headers, Source Sans Pro for body text
+- **Spacing**: 4px base unit system for consistent rhythm
+- **Components**: Purposeful, accessible UI components with defensive CSS
+
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
@@ -155,4 +210,3 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## License
 
 MIT License
-
