@@ -181,23 +181,23 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100">Profile</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100">Profile</h1>
+          <p className="text-muted-foreground mt-1 text-sm md:text-base">
             Manage your account settings and personal information
           </p>
         </div>
         <Link href="/dashboard/settings">
-          <Button variant="outline">
+          <Button variant="outline" className="w-full sm:w-auto">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Settings
           </Button>
         </Link>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-3">
+      <div className="grid gap-4 md:gap-6 md:grid-cols-3">
         {/* Profile Info */}
         <Card className="md:col-span-2">
           <CardHeader>

@@ -18,15 +18,25 @@ export function WelcomeBanner() {
     // This always bites me - Supabase auth.user doesn't have full_name, gotta hit the users table
     const loadUserProfile = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return
+        const { data: { user }, error: userError } = await supabase.auth.getUser()
+        if (userError || !user) return
 
         // Try users table first (most reliable source)
-        const { data: userProfile } = await supabase
+        const { data: userProfile, error: profileError } = await supabase
           .from('users')
           .select('full_name, email')
           .eq('id', user.id)
           .single()
+
+        if (profileError) {
+          // If users table doesn't exist or query fails, fall back to email
+          if (user.email) {
+            const emailPrefix = user.email.split('@')[0]
+            const capitalizedName = emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1)
+            setArcanaUserName(capitalizedName)
+          }
+          return
+        }
 
         if (userProfile?.full_name) {
           // Extract first name only - keeps it personal but not overly familiar
@@ -39,10 +49,14 @@ export function WelcomeBanner() {
           const capitalizedName = emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1)
           setArcanaUserName(capitalizedName)
         }
-      } catch (err) {
+      } catch (err: any) {
         // Silently fail - banner just won't show if we can't get the name
         // Better than showing an error state for something non-critical
-        console.error('Failed to load user profile for greeting:', err)
+        if (err?.message?.includes('Missing Supabase') || err?.message?.includes('environment variables')) {
+          console.warn('Supabase not configured')
+        } else {
+          console.error('Failed to load user profile for greeting:', err)
+        }
       }
     }
 
@@ -88,19 +102,19 @@ export function WelcomeBanner() {
   // The /10 opacity is slightly lighter than typical - gives it a softer feel
   // Manual adjustment: border is /20 to create subtle depth without being heavy
   return (
-    <Card className="bg-gradient-to-r from-[#2A2D7C]/10 via-[#9C6ADE]/10 to-[#00C1B3]/10 border-2 border-[#2A2D7C]/20 p-6 mb-6">
-      <div className="flex items-center gap-4">
+    <Card className="bg-gradient-to-r from-[#2A2D7C]/10 via-[#9C6ADE]/10 to-[#00C1B3]/10 border-2 border-[#2A2D7C]/20 p-4 md:p-6 mb-4 md:mb-6">
+      <div className="flex items-center gap-3 md:gap-4">
         {/* Icon container - fixed size prevents layout shift */}
-        <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-[#2A2D7C] to-[#9C6ADE] text-white flex-shrink-0">
+        <div className="flex items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-br from-[#2A2D7C] to-[#9C6ADE] text-white flex-shrink-0">
           {renderTimeIcon()}
         </div>
         
         {/* Text content - flex-1 allows it to take remaining space */}
         <div className="flex-1 min-w-0">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 truncate">
+          <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100 truncate">
             {timeBasedGreeting}, {arcanaUserName}!
           </h2>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+          <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400 mt-1">
             Ready to make today productive? Let&apos;s get started.
           </p>
         </div>

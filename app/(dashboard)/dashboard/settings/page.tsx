@@ -310,15 +310,15 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Settings</h1>
+          <p className="text-muted-foreground mt-1 text-sm md:text-base">
             Manage your preferences and customize your Arcana experience
           </p>
         </div>
-        <Button onClick={handleSave} disabled={saving} className="gap-2">
+        <Button onClick={handleSave} disabled={saving} className="gap-2 w-full sm:w-auto">
           {saving ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -333,8 +333,9 @@ export default function SettingsPage() {
         </Button>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 md:space-y-6">
+        <div className="overflow-x-auto -mx-4 md:mx-0 px-4 md:px-0">
+          <TabsList className="inline-flex w-auto min-w-full md:grid md:w-full md:grid-cols-6">
           <TabsTrigger value="appearance" className="gap-2">
             <Palette className="h-4 w-4" />
             Appearance
@@ -359,7 +360,8 @@ export default function SettingsPage() {
             <Zap className="h-4 w-4" />
             Advanced
           </TabsTrigger>
-        </TabsList>
+          </TabsList>
+        </div>
 
         {/* Appearance Tab */}
         <TabsContent value="appearance" className="space-y-6">

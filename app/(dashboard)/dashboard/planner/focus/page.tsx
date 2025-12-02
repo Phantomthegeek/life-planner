@@ -38,22 +38,22 @@ export default function FocusPage() {
   const currentTask = todayTasks.find((t) => t.id === selectedTask)
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
-      <div className="flex items-center gap-4">
+    <div className="space-y-4 md:space-y-6 max-w-4xl mx-auto">
+      <div className="flex items-center gap-2 md:gap-4">
         <Link href="/dashboard/planner">
           <Button variant="ghost" size="icon">
             <ArrowLeft className="h-4 w-4" />
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Flow Mode</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Flow Mode</h1>
+          <p className="text-sm md:text-base text-muted-foreground">
             Stay focused with the Pomodoro technique.
           </p>
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-4 md:gap-6 md:grid-cols-2">
         <PomodoroTimer
           initialMinutes={25}
           taskTitle={currentTask?.title}

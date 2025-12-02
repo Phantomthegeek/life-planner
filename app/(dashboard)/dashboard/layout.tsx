@@ -20,11 +20,11 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <Sidebar />
-      <div className="ml-64">
+      <div className="md:ml-64">
         <Header />
-        <main className="pt-16 p-6">
+        <main className="pt-16 p-4 md:p-6">
           {children}
         </main>
       </div>
@@ -35,4 +35,3 @@ export default async function DashboardLayout({
     </div>
   )
 }
-

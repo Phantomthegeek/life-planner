@@ -6,8 +6,12 @@ export const createClient = () => {
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error(
-      'Missing Supabase environment variables. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in your environment variables.'
+    // Return a mock client that will fail gracefully instead of throwing
+    // This prevents client-side crashes when env vars are missing
+    console.warn('Supabase environment variables are missing. Some features may not work.')
+    return createBrowserClient<Database>(
+      supabaseUrl || 'https://placeholder.supabase.co',
+      supabaseAnonKey || 'placeholder-key'
     )
   }
 

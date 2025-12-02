@@ -22,9 +22,10 @@ export function DashboardLayoutClient() {
         
         if (response.ok) {
           const data = await response.json()
-          setTasks(data)
+          setTasks(Array.isArray(data) ? data : [])
         }
       } catch (error) {
+        // Fail silently - tasks just won't load
         console.error('Failed to fetch tasks:', error)
       }
     }

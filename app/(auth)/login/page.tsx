@@ -233,7 +233,7 @@ export default function LoginPage() {
       </div>
 
       <Card className="w-full max-w-md relative z-10 backdrop-blur-xl bg-white/95 dark:bg-gray-900/95 border-2 border-white/20 shadow-2xl">
-        <CardHeader className="space-y-1 text-center pb-8 pt-8">
+        <CardHeader className="space-y-1 text-center pb-6 md:pb-8 pt-6 md:pt-8">
           {/* Animated Logo */}
           <div className="flex justify-center mb-6">
             <div className="relative">
@@ -245,7 +245,7 @@ export default function LoginPage() {
             </div>
           </div>
           
-          <CardTitle className="text-5xl font-bold bg-gradient-to-r from-[#2A2D7C] via-[#9C6ADE] to-[#00C1B3] bg-clip-text text-transparent animate-gradient">
+          <CardTitle className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-[#2A2D7C] via-[#9C6ADE] to-[#00C1B3] bg-clip-text text-transparent animate-gradient">
             Arcana
           </CardTitle>
           <CardDescription className="text-base mt-3 text-gray-600 dark:text-gray-300">

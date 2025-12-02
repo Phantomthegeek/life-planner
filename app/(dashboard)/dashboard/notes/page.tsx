@@ -72,13 +72,13 @@ export default function NotesPage() {
         // Update existing note
         const response = await fetch(`/api/notes?id=${editingNote.id}`, {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
             content: noteContent,
             date: noteDate,
             category: noteCategory,
-          }),
-        })
+        }),
+      })
 
         if (!response.ok) throw new Error('Failed to update note')
         toast({
@@ -158,14 +158,14 @@ export default function NotesPage() {
   })
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Notes</h1>
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100">Notes</h1>
           <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
             Capture your thoughts, ideas, and daily reflections
-          </p>
-        </div>
+        </p>
+      </div>
         <Dialog open={dialogOpen} onOpenChange={(open) => {
           setDialogOpen(open)
           if (!open) {
@@ -181,7 +181,7 @@ export default function NotesPage() {
               New Note
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingNote ? 'Edit Note' : 'Create New Note'}</DialogTitle>
               <DialogDescription>
@@ -189,20 +189,20 @@ export default function NotesPage() {
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
-              <div className="space-y-2">
+          <div className="space-y-2">
                 <Label htmlFor="note-date">Date</Label>
                 <div className="relative">
                   <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input
+              <Input
                     id="note-date"
-                    type="date"
+                type="date"
                     value={noteDate}
                     onChange={(e) => setNoteDate(e.target.value)}
                     className="pl-10"
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
                 <Label htmlFor="note-category">Category</Label>
                 <select
                   id="note-category"
@@ -219,18 +219,18 @@ export default function NotesPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="note-content">Content</Label>
-                <Textarea
+            <Textarea
                   id="note-content"
                   value={noteContent}
                   onChange={(e) => setNoteContent(e.target.value)}
                   placeholder="Write your note here..."
                   className="min-h-[200px]"
-                />
-              </div>
+            />
+          </div>
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => setDialogOpen(false)}>
                   Cancel
-                </Button>
+            </Button>
                 <Button onClick={handleSaveNote}>Save Note</Button>
               </div>
             </div>
@@ -259,19 +259,19 @@ export default function NotesPage() {
             >
               {filter}
             </Button>
-          ))}
-        </div>
-      </div>
+                ))}
+            </div>
+              </div>
 
       {/* Notes Grid */}
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3, 4, 5, 6].map((i) => (
             <Card key={i} className="h-48 bg-gray-100 dark:bg-gray-800 animate-pulse" />
           ))}
-        </div>
+                </div>
       ) : filteredNotes.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredNotes.map((note) => (
             <Card
               key={note.id}
@@ -284,7 +284,7 @@ export default function NotesPage() {
                     <FileText className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                     <span className="text-xs text-gray-500 dark:text-gray-400">
                       {new Date(note.date).toLocaleDateString()}
-                    </span>
+                      </span>
                   </div>
                   {note.category && (
                     <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary">
@@ -323,7 +323,7 @@ export default function NotesPage() {
               </CardContent>
             </Card>
           ))}
-        </div>
+            </div>
       ) : (
         <Card className="p-12 text-center">
           <FileText className="h-12 w-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />

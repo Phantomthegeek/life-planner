@@ -43,14 +43,19 @@ export function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false)
 
   const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut()
-    if (error) {
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive',
-      })
-    } else {
+    try {
+      const { error } = await supabase.auth.signOut()
+      if (error) {
+        toast({
+          title: 'Error',
+          description: error.message,
+          variant: 'destructive',
+        })
+      }
+    } catch (err) {
+      console.error('Logout error:', err)
+    } finally {
+      // Always redirect even if signOut fails
       router.push('/login')
       router.refresh()
     }
