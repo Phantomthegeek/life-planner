@@ -71,9 +71,15 @@ export function Header() {
   }, [supabase])
 
   const logout = async () => {
-    await supabase.auth.signOut()
-    router.push('/login')
-    router.refresh()
+    try {
+      await supabase.auth.signOut()
+    } catch (err) {
+      // Even if signOut fails, we should still redirect
+      console.error('Logout error:', err)
+    } finally {
+      router.push('/login')
+      router.refresh()
+    }
   }
 
   return (
