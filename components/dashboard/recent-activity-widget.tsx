@@ -23,12 +23,14 @@ export function RecentActivityWidget() {
   useEffect(() => {
     const loadRecentActivity = async () => {
       try {
-        // Fetch recent tasks, notes, projects, and certifications
+        // Pull a small, recent slice of each thing. The tasks API now
+        // honours `limit` and `order`; the others currently return their
+        // own server-side ordering and we trim client-side below.
         const [tasksRes, notesRes, projectsRes, certsRes] = await Promise.all([
-          fetch('/api/tasks?limit=5&order=created_at').catch(() => null),
-          fetch('/api/notes?limit=5').catch(() => null),
-          fetch('/api/projects?limit=5').catch(() => null),
-          fetch('/api/certifications?limit=5').catch(() => null),
+          fetch('/api/tasks?limit=10&order=created_at').catch(() => null),
+          fetch('/api/notes').catch(() => null),
+          fetch('/api/projects').catch(() => null),
+          fetch('/api/certifications').catch(() => null),
         ])
 
         const allActivities: Activity[] = []
@@ -149,7 +151,7 @@ export function RecentActivityWidget() {
         <CardContent>
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-12 bg-gray-100 dark:bg-gray-800 rounded animate-pulse" />
+              <div key={i} className="h-12 bg-muted rounded animate-pulse" />
             ))}
           </div>
         </CardContent>
@@ -180,13 +182,13 @@ export function RecentActivityWidget() {
                 <Link
                   key={activity.id}
                   href={activity.url}
-                  className="flex items-start gap-3 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors group"
+                  className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted transition-colors group"
                 >
                   <div className="p-1.5 rounded-full bg-primary/10 group-hover:bg-primary/20 transition-colors">
                     <Icon className="h-4 w-4 text-primary" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                    <p className="text-sm font-medium text-foreground truncate">
                       {activity.title}
                     </p>
                     {activity.description && (

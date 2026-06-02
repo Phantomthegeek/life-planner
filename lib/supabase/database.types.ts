@@ -1640,6 +1640,75 @@ export interface Database {
         }
         Relationships: []
       }
+      user_gamification: {
+        Row: {
+          user_id: string
+          xp: number
+          level: number
+          total_tasks_completed: number
+          total_habits_completed: number
+          streak: number
+          achievements: Json
+          updated_at: string
+        }
+        Insert: {
+          user_id: string
+          xp?: number
+          level?: number
+          total_tasks_completed?: number
+          total_habits_completed?: number
+          streak?: number
+          achievements?: Json
+          updated_at?: string
+        }
+        Update: {
+          user_id?: string
+          xp?: number
+          level?: number
+          total_tasks_completed?: number
+          total_habits_completed?: number
+          streak?: number
+          achievements?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_task_templates: {
+        Row: {
+          id: string
+          user_id: string
+          name: string
+          title: string
+          detail: string | null
+          duration_minutes: number
+          category: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          name: string
+          title: string
+          detail?: string | null
+          duration_minutes?: number
+          category?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          name?: string
+          title?: string
+          detail?: string | null
+          duration_minutes?: number
+          category?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       task_graph_summary: {

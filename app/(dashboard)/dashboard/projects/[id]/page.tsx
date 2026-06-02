@@ -43,11 +43,14 @@ export default function ProjectDetailPage() {
 
   const fetchProject = async () => {
     try {
-      const response = await fetch('/api/projects')
+      const response = await fetch(`/api/projects/${projectId}`)
+      if (response.status === 404) {
+        setProject(null)
+        return
+      }
       if (!response.ok) throw new Error('Failed to fetch project')
-      const projects = await response.json()
-      const foundProject = projects.find((p: Project) => p.id === projectId)
-      setProject(foundProject || null)
+      const project = await response.json()
+      setProject(project)
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -61,7 +64,7 @@ export default function ProjectDetailPage() {
 
   const handleDelete = async () => {
     try {
-      const response = await fetch(`/api/projects?id=${projectId}`, {
+      const response = await fetch(`/api/projects/${projectId}`, {
         method: 'DELETE',
       })
 
