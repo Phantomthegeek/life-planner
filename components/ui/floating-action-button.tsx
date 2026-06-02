@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Plus, X, FileText, CheckSquare, Target } from 'lucide-react'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 
 interface QuickAction {
@@ -13,9 +13,25 @@ interface QuickAction {
   color?: string
 }
 
+// Routes where the FAB would just get in the way: the dashboard already has a
+// "Quick Actions" card, and the planner/timetable views need every pixel.
+const HIDE_ON_ROUTES = [
+  '/dashboard',
+  '/dashboard/planner',
+  '/dashboard/planner/timetable',
+  '/dashboard/planner/focus',
+]
+
 export function FloatingActionButton() {
   const [open, setOpen] = useState(false)
   const router = useRouter()
+  const pathname = usePathname()
+
+  // Hide on routes where it's redundant or in the way. Exact match so
+  // sub-routes (e.g. /dashboard/planner/something/else) still get it.
+  if (pathname && HIDE_ON_ROUTES.includes(pathname)) {
+    return null
+  }
 
   const actions: QuickAction[] = [
     {
@@ -48,9 +64,16 @@ export function FloatingActionButton() {
   ]
 
   return (
-    <div className="fixed bottom-6 right-6 z-50">
+    // Only show on mobile/tablet — desktop has the persistent sidebar nav, so
+    // a floating button there is just visual noise. The `pb-[env(...)]`
+    // pushes the FAB above the iOS home indicator in PWA mode.
+    <div
+      className="fixed right-4 z-40 md:hidden"
+      style={{
+        bottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))',
+      }}
+    >
       <div className="relative">
-        {/* Action buttons */}
         {open && (
           <div className="absolute bottom-16 right-0 flex flex-col gap-2 mb-2">
             {actions.map((action, index) => {
@@ -60,6 +83,7 @@ export function FloatingActionButton() {
                   key={action.label}
                   size="icon"
                   title={action.label}
+                  aria-label={action.label}
                   className={cn(
                     'h-12 w-12 rounded-full shadow-lg transition-all',
                     action.color || 'bg-primary hover:bg-primary/90',
@@ -75,10 +99,11 @@ export function FloatingActionButton() {
           </div>
         )}
 
-        {/* Main FAB */}
         <Button
           size="icon"
           title={open ? 'Close' : 'Quick Actions'}
+          aria-label={open ? 'Close quick actions' : 'Open quick actions'}
+          aria-expanded={open}
           className={cn(
             'h-14 w-14 rounded-full shadow-lg transition-all',
             open
@@ -97,4 +122,3 @@ export function FloatingActionButton() {
     </div>
   )
 }
-
