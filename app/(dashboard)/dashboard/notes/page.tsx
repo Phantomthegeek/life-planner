@@ -409,9 +409,9 @@ export default function NotesPage() {
         </div>
       ) : (
         <Card className="p-12 text-center">
-          <FileText className="h-12 w-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">No notes found</h3>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+          <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-lg font-semibold mb-2">No notes found</h3>
+          <p className="text-sm text-muted-foreground mb-4">
             {searchQuery ? 'Try adjusting your search or filters' : 'Create your first note to get started'}
           </p>
           {!searchQuery && (

@@ -14,7 +14,7 @@ import {
   Link2,
   Target,
   Settings,
-  HelpCircle,
+  BarChart3,
   BookOpen,
   Menu,
   X,
@@ -189,7 +189,7 @@ export function Sidebar() {
             }}
             className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
           >
-            <HelpCircle className="h-5 w-5 flex-shrink-0" />
+            <BarChart3 className="h-5 w-5 flex-shrink-0" />
             <span>Statistics</span>
           </Link>
         </div>

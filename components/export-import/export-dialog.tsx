@@ -42,7 +42,7 @@ export function ExportDialog() {
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
-      link.download = `little-einstein-export-${new Date().toISOString().split('T')[0]}.${format}`
+      link.download = `arcana-export-${new Date().toISOString().split('T')[0]}.${format}`
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)

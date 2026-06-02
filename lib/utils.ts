@@ -7,22 +7,31 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-// Get app URL - handles both server and client contexts
-// This is needed because window isn't available on the server
+// Get app URL - handles both server and client contexts.
+// On the client we prefer window.location.origin so previews and PR URLs
+// just work without env config. On the server we lean on NEXT_PUBLIC_APP_URL
+// (set per Vercel environment) or the auto-injected VERCEL_URL, falling
+// back to localhost for local dev.
 export function getAppUrl(): string {
   if (typeof window === 'undefined') {
-    // Server-side: use env var or fallback
-    return process.env.NEXT_PUBLIC_APP_URL || 'https://life-planner.vercel.app'
+    if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL
+    if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`
+    return 'http://localhost:3000'
   }
-  
-  // Client-side: prefer env var, fallback to current origin
   return process.env.NEXT_PUBLIC_APP_URL || window.location.origin
 }
 
-// Date formatting - converts Date to YYYY-MM-DD string
-// Used throughout the app for date inputs and API calls
+// Date formatting - converts Date to YYYY-MM-DD string in the user's LOCAL
+// timezone. Critical not to use `toISOString()` here: that returns UTC, which
+// silently shifts the date for anyone west of UTC after their local evening.
+// (e.g. a Pacific-time user at 11pm Monday would see "Tuesday" in habits,
+// streaks, today's tasks, etc.) The bookkeeping in this app is day-of-week,
+// not instant-of-time, so local is what users mean.
 export function formatDate(date: Date): string {
-  return date.toISOString().split('T')[0]
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
 // Add days to a date - returns new Date object

@@ -15,9 +15,9 @@ export default function TimetablePage() {
   const [currentDate, setCurrentDate] = useState(formatDate(new Date()))
   const { tasks } = useTaskStore()
 
-  const handleTaskClick = (task: any) => {
-    // Could open task dialog here
-    console.log('Task clicked:', task)
+  const handleTaskClick = (_task: any) => {
+    // Hook for a future "open task dialog" flow. Today the timetable view
+    // is read-only — edits happen in the main planner.
   }
 
   const handleTaskToggle = async (task: any) => {

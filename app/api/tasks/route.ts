@@ -14,17 +14,34 @@ export async function GET(request: NextRequest) {
     const date = searchParams.get('date')
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
+    // Allowlist of orderable columns so we don't pass arbitrary user input
+    // straight into Supabase. Defaults to `start_ts` to preserve the
+    // existing planner/timetable expectations.
+    const orderParam = searchParams.get('order')
+    const validOrders = new Set(['start_ts', 'created_at', 'date', 'updated_at'])
+    const orderColumn = orderParam && validOrders.has(orderParam) ? orderParam : 'start_ts'
+    const ascending = orderColumn === 'start_ts'
+    // limit is optional. Clamp to a sensible ceiling so a typo can't pull
+    // the entire table.
+    const limitRaw = Number(searchParams.get('limit'))
+    const limit = Number.isFinite(limitRaw) && limitRaw > 0
+      ? Math.min(Math.floor(limitRaw), 200)
+      : null
 
     let query = supabase
       .from('tasks')
       .select('*')
       .eq('user_id', user.id)
-      .order('start_ts', { ascending: true })
+      .order(orderColumn, { ascending })
 
     if (date) {
       query = query.eq('date', date)
     } else if (startDate && endDate) {
       query = query.gte('date', startDate).lte('date', endDate)
+    }
+
+    if (limit !== null) {
+      query = query.limit(limit)
     }
 
     const { data, error } = await query

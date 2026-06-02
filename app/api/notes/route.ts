@@ -49,21 +49,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if note already exists for this date
-    const { data: existing } = await supabase
-      .from('notes')
-      .select('*')
-      .eq('user_id', user.id)
-      .eq('date', date)
-      .single()
-
-    if (existing) {
-      return NextResponse.json(
-        { error: 'Note already exists for this date. Use PATCH to update.' },
-        { status: 400 }
-      )
-    }
-
+    // The notes UI is designed for multiple notes per day (grid of cards), so
+    // we deliberately do not check for an existing note here. Use PATCH if the
+    // caller wants to update a specific note by id.
     const { data, error } = await supabase
       .from('notes')
       .insert({

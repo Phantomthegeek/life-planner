@@ -230,11 +230,20 @@ export default function TemplatesPage() {
 
       {templates.length === 0 ? (
         <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Plus className="h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-muted-foreground text-center">
-              No templates yet. Create your first template to get started!
+          <CardContent className="flex flex-col items-center justify-center py-16 px-6 text-center">
+            <div className="p-4 rounded-full bg-primary/10 w-fit mb-6">
+              <Copy className="h-12 w-12 text-primary" />
+            </div>
+            <h3 className="text-xl font-semibold mb-2">No templates yet</h3>
+            <p className="text-muted-foreground max-w-md mb-6">
+              Save the shape of tasks you create often — a morning routine, a
+              study block, a stand-up — and reuse them in one click from the
+              planner.
             </p>
+            <Button onClick={() => setDialogOpen(true)} size="lg">
+              <Plus className="mr-2 h-5 w-5" />
+              Create your first template
+            </Button>
           </CardContent>
         </Card>
       ) : (

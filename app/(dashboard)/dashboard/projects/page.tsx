@@ -20,7 +20,7 @@ import {
 import { useToast } from '@/hooks/use-toast'
 import { useUndo } from '@/hooks/use-undo'
 import { ToastAction } from '@/components/ui/toast'
-import { Plus, FolderOpen, Target, Calendar, CheckCircle2, Loader2, Edit, Trash2, ArrowRight } from 'lucide-react'
+import { Plus, FolderOpen, Calendar, Trash2, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
 import { Progress } from '@/components/ui/progress'
 import { format } from 'date-fns'
@@ -176,21 +176,21 @@ export default function ProjectsPage() {
       <div className="space-y-8">
         <div className="flex items-center justify-between">
           <div className="space-y-2">
-            <div className="h-10 w-48 bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
-            <div className="h-6 w-64 bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
+            <div className="h-10 w-48 bg-muted rounded animate-pulse" />
+            <div className="h-6 w-64 bg-muted rounded animate-pulse" />
           </div>
-          <div className="h-10 w-32 bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
+          <div className="h-10 w-32 bg-muted rounded animate-pulse" />
         </div>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3, 4, 5, 6].map((i) => (
             <Card key={i} className="h-64">
               <CardHeader>
-                <div className="h-6 w-3/4 bg-gray-200 dark:bg-gray-800 rounded animate-pulse mb-2" />
-                <div className="h-4 w-full bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
+                <div className="h-6 w-3/4 bg-muted rounded animate-pulse mb-2" />
+                <div className="h-4 w-full bg-muted rounded animate-pulse" />
               </CardHeader>
               <CardContent>
-                <div className="h-4 w-1/2 bg-gray-200 dark:bg-gray-800 rounded animate-pulse mb-4" />
-                <div className="h-2 w-full bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
+                <div className="h-4 w-1/2 bg-muted rounded animate-pulse mb-4" />
+                <div className="h-2 w-full bg-muted rounded animate-pulse" />
               </CardContent>
             </Card>
           ))}
@@ -264,7 +264,7 @@ export default function ProjectsPage() {
             <div className="p-4 rounded-full bg-primary/10 w-fit mx-auto mb-6">
               <FolderOpen className="h-16 w-16 text-primary" />
             </div>
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
+            <h3 className="text-xl font-semibold mb-2">
               No projects yet
             </h3>
             <p className="text-muted-foreground text-center max-w-md mx-auto mb-6">
@@ -279,54 +279,96 @@ export default function ProjectsPage() {
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {projects.map((project) => (
-            <Link key={project.id} href={`/dashboard/projects/${project.id}`}>
-              <Card className="h-full flex flex-col transition-colors hover:border-foreground/20">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <CardTitle className="text-xl mb-2">{project.name}</CardTitle>
-                      {project.description && (
-                        <CardDescription className="line-clamp-2">
-                          {project.description}
-                        </CardDescription>
+            // Wrap link + delete button in a positioned container so the
+            // delete button can sit on top of the card without becoming
+            // part of the link's clickable area.
+            <div key={project.id} className="relative group">
+              <Link href={`/dashboard/projects/${project.id}`}>
+                <Card className="h-full flex flex-col transition-colors hover:border-foreground/20">
+                  <CardHeader>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <CardTitle className="text-xl mb-2 pr-8">{project.name}</CardTitle>
+                        {project.description && (
+                          <CardDescription className="line-clamp-2">
+                            {project.description}
+                          </CardDescription>
+                        )}
+                      </div>
+                      <span className={`px-2 py-1 rounded text-xs font-medium flex-shrink-0 ${
+                        project.status === 'active' ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' :
+                        project.status === 'completed' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' :
+                        project.status === 'paused' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300' :
+                        'bg-muted text-muted-foreground'
+                      }`}>
+                        {project.status}
+                      </span>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="flex-1 flex flex-col justify-between">
+                    <div className="space-y-4">
+                      <div>
+                        <div className="flex items-center justify-between text-sm mb-2">
+                          <span className="text-muted-foreground">Progress</span>
+                          <span className="font-medium">{project.progress}%</span>
+                        </div>
+                        <Progress value={project.progress} />
+                      </div>
+                      {project.target_date && (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Calendar className="h-4 w-4" />
+                          <span>Due: {format(new Date(project.target_date), 'MMM d, yyyy')}</span>
+                        </div>
                       )}
                     </div>
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${
-                      project.status === 'active' ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' :
-                      project.status === 'completed' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' :
-                      project.status === 'paused' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300' :
-                      'bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-300'
-                    }`}>
-                      {project.status}
-                    </span>
-                  </div>
-                </CardHeader>
-                <CardContent className="flex-1 flex flex-col justify-between">
-                  <div className="space-y-4">
-                    <div>
-                      <div className="flex items-center justify-between text-sm mb-2">
-                        <span className="text-muted-foreground">Progress</span>
-                        <span className="font-medium">{project.progress}%</span>
-                      </div>
-                      <Progress value={project.progress} />
+                    <div className="mt-4 flex items-center text-primary font-medium">
+                      <span>View Details</span>
+                      <ArrowRight className="ml-2 h-4 w-4" />
                     </div>
-                    {project.target_date && (
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Calendar className="h-4 w-4" />
-                        <span>Due: {format(new Date(project.target_date), 'MMM d, yyyy')}</span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="mt-4 flex items-center text-primary font-medium">
-                    <span>View Details</span>
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
+                  </CardContent>
+                </Card>
+              </Link>
+              {/* Always visible on touch (md:opacity-0 = hover-revealed on
+                  desktop+). stopPropagation+preventDefault keeps the
+                  surrounding Link from navigating when the icon is tapped. */}
+              <button
+                type="button"
+                aria-label={`Delete ${project.name}`}
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  handleDeleteClick(project.id)
+                }}
+                className="absolute top-2 right-2 z-10 p-1.5 rounded-md md:opacity-0 md:group-hover:opacity-100 transition-opacity bg-background/80 hover:bg-destructive/10 text-muted-foreground hover:text-destructive border border-transparent hover:border-destructive/30"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </div>
           ))}
         </div>
       )}
+
+      <AlertDialog
+        open={deleteDialogOpen}
+        onOpenChange={(open) => {
+          setDeleteDialogOpen(open)
+          if (!open) setProjectToDelete(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this project?</AlertDialogTitle>
+            <AlertDialogDescription>
+              The project will be removed. Tasks linked to it stay where they
+              are, just unassigned. You can undo from the toast after deletion.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
