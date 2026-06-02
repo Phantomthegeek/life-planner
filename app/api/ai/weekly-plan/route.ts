@@ -75,32 +75,45 @@ export async function POST(request: NextRequest) {
       name: cp.certifications?.name || '',
     }))
 
-    // Generate plans for each day of the week
-    const weeklyPlans = []
-    for (let i = 0; i < 7; i++) {
-      const currentDate = addDays(new Date(startDate), i)
-      const dateStr = formatDate(currentDate)
-      const dayTasks = (tasks || []).filter((t) => t.date === dateStr)
-
-      const plan = await generateDailyPlan({
-        userPreferences: {
-          wake_time: userData.wake_time || '07:00',
-          sleep_time: userData.sleep_time || '23:00',
-          work_hours_start: userData.work_hours_start || '09:00',
-          work_hours_end: userData.work_hours_end || '17:00',
-        },
-        existingTasks: dayTasks,
-        habits: habits || [],
-        certifications,
-        mode,
-        date: dateStr,
-      })
-
-      weeklyPlans.push({
-        date: dateStr,
-        plan,
-      })
+    // Fan the 7 daily plans out in parallel — each call hits OpenAI
+    // independently, so doing them sequentially used to make the user wait
+    // 20–40s. Parallel cuts it to roughly a single-day round-trip.
+    const userPreferences = {
+      wake_time: userData.wake_time || '07:00',
+      sleep_time: userData.sleep_time || '23:00',
+      work_hours_start: userData.work_hours_start || '09:00',
+      work_hours_end: userData.work_hours_end || '17:00',
     }
+
+    const dayInputs = Array.from({ length: 7 }, (_, i) => {
+      const dateStr = formatDate(addDays(new Date(startDate), i))
+      return {
+        dateStr,
+        dayTasks: (tasks || []).filter((t) => t.date === dateStr),
+      }
+    })
+
+    const planResults = await Promise.allSettled(
+      dayInputs.map(({ dateStr, dayTasks }) =>
+        generateDailyPlan({
+          userPreferences,
+          existingTasks: dayTasks,
+          habits: habits || [],
+          certifications,
+          mode,
+          date: dateStr,
+        })
+      )
+    )
+
+    // If a single day fails we still ship the others — a partial week is
+    // much more useful than a 500.
+    const weeklyPlans = planResults.map((result, idx) => ({
+      date: dayInputs[idx].dateStr,
+      ...(result.status === 'fulfilled'
+        ? { plan: result.value }
+        : { error: result.reason?.message || 'AI failed for this day' }),
+    }))
 
     // Save AI queries
     await supabase.from('ai_queries').insert({

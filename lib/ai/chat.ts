@@ -1,6 +1,11 @@
 import OpenAI from 'openai'
 import { detectChatMode, getModePrompt, ChatMode } from './chat-modes'
 import { buildContextBundle } from './context-builder'
+import {
+  fetchMemories,
+  formatMemoriesForPrompt,
+  extractAndPersistMemories,
+} from './chat-memory'
 
 export interface ChatMessage {
   id: string
@@ -53,11 +58,15 @@ export async function chatWithArcana(
   // Detect chat mode
   const modeDetection = detectChatMode(message)
 
+  // We need supabase for both context and chat memory — instantiate once.
+  const { createClient } = await import('@/lib/supabase/server')
+  const supabase = createClient()
+
   // Build context bundle for user
   let userContext = ''
   try {
     const contextBundle = await buildContextBundle(userId)
-    
+
     userContext = `
 User Context:
 - Active Projects: ${contextBundle.progress_context.active_projects.length}
@@ -72,8 +81,20 @@ User Context:
     console.error('Error building context:', error)
   }
 
+  // Pull long-term memory (preferences, goals, identity, topics). This is the
+  // bit that makes Arcana feel like it actually knows the user across sessions
+  // rather than starting from scratch every conversation.
+  let memoryBlock = ''
+  try {
+    const memories = await fetchMemories(supabase, userId)
+    memoryBlock = formatMemoriesForPrompt(memories)
+  } catch (error) {
+    console.error('Error loading chat memory:', error)
+  }
+
   // Get mode-specific prompt
-  const systemPrompt = getModePrompt(modeDetection.mode, modeDetection.context) + userContext
+  const systemPrompt =
+    getModePrompt(modeDetection.mode, modeDetection.context) + userContext + memoryBlock
 
   // Build conversation context
   const messages: Array<{ role: 'user' | 'assistant' | 'system'; content: string }> = [
@@ -96,18 +117,18 @@ User Context:
 
   // Add context-specific information if provided
   if (context?.module_id) {
-    // Fetch module details
     try {
-      const { createClient } = await import('@/lib/supabase/server')
-      const supabase = createClient()
       const { data: module } = await supabase
         .from('cert_modules')
         .select('*, certifications(name)')
         .eq('id', context.module_id)
         .single()
-      
+
       if (module) {
-        messages[0].content += `\n\nThe user is asking about: ${module.title} (Module from ${module.certifications?.name || 'certification'}).`
+        const certName = Array.isArray(module.certifications)
+          ? module.certifications[0]?.name
+          : (module.certifications as any)?.name
+        messages[0].content += `\n\nThe user is asking about: ${module.title} (Module from ${certName || 'certification'}).`
         if (module.description) {
           messages[0].content += `\nModule Description: ${module.description}`
         }
@@ -119,16 +140,13 @@ User Context:
   }
 
   if (context?.cert_id) {
-    // Fetch certification details
     try {
-      const { createClient } = await import('@/lib/supabase/server')
-      const supabase = createClient()
       const { data: cert } = await supabase
         .from('certifications')
         .select('name, description')
         .eq('id', context.cert_id)
         .single()
-      
+
       if (cert) {
         messages[0].content += `\n\nThe user is asking about: ${cert.name}. ${cert.description || ''}. Provide helpful study advice.`
       }
@@ -158,6 +176,11 @@ User Context:
     const shouldSaveToNotes = modeDetection.mode === 'learning' || 
                               message.toLowerCase().includes('save') ||
                               message.toLowerCase().includes('summary')
+
+    // Fire-and-forget memory write. We deliberately do NOT await this so the
+    // user sees their AI reply with no extra latency; the upsert finishes in
+    // the background. Errors are swallowed inside the helper.
+    void extractAndPersistMemories(supabase, userId, message)
 
     return {
       message: responseText,
