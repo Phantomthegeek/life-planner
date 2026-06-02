@@ -153,7 +153,8 @@ export default function CertificationsPage() {
 
     setAiLoading(true)
     try {
-      // Use AI to generate certification details
+      // Step 1: ask the AI to flesh out the cert metadata (slug, full name,
+      // difficulty, description).
       const aiResponse = await fetch('/api/ai/generate-certification', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -166,7 +167,7 @@ export default function CertificationsPage() {
 
       const certData = await aiResponse.json()
 
-      // Save the certification
+      // Step 2: persist the cert row so we have an id to build against.
       const saveResponse = await fetch('/api/certifications', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -178,10 +179,46 @@ export default function CertificationsPage() {
         throw new Error(error.error || 'Failed to save certification')
       }
 
+      const savedCert = await saveResponse.json()
+
+      // Step 3: kick off the full course build (modules + lessons +
+      // content). Tell the user up front that it takes a moment — this is
+      // dozens of AI calls fanned out in parallel.
       toast({
-        title: 'Success!',
-        description: `Course "${certData.name}" added successfully!`,
+        title: 'Building course…',
+        description: `Generating modules and lessons for "${certData.name}". This usually takes 30–60 seconds.`,
       })
+
+      const buildResponse = await fetch(
+        `/api/certifications/${savedCert.id}/build`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+        }
+      )
+
+      // We deliberately don't fail the whole flow if the build endpoint
+      // hiccups — the cert is already saved and the user can hit Regenerate
+      // from the course page.
+      if (!buildResponse.ok) {
+        const err = await buildResponse.json().catch(() => ({}))
+        toast({
+          title: 'Course added — content build failed',
+          description:
+            err.error ||
+            'You can open the course and click Regenerate to retry building lessons.',
+          variant: 'destructive',
+        })
+      } else {
+        const buildData = await buildResponse.json()
+        toast({
+          title: 'Course ready!',
+          description:
+            buildData.message ||
+            `"${certData.name}" is fully built and ready to study.`,
+        })
+      }
 
       setCertName('')
       setAddDialogOpen(false)

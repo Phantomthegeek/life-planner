@@ -62,41 +62,64 @@ export async function generateLessonContent(
     throw new Error('OpenAI API key is not configured')
   }
 
-  const prompt = `You are an expert course instructor creating comprehensive lesson content.
+  const difficultyLabel =
+    options.difficulty <= 1
+      ? 'Beginner'
+      : options.difficulty >= 5
+        ? 'Expert / postgraduate'
+        : options.difficulty === 2
+          ? 'Foundational'
+          : options.difficulty === 3
+            ? 'Intermediate'
+            : 'Advanced'
+
+  // Prompt is deliberately long. We want the AI to behave like a textbook
+  // author, not a blog writer — formal definitions, derivations, worked
+  // examples, mapped to the official exam blueprint. The user has explicitly
+  // asked for lessons that match what a real classroom would teach, so we
+  // demand that out loud and budget enough tokens for it.
+  const prompt = `You are an experienced university lecturer and certified instructor writing a self-contained chapter of a textbook for the following certification programme. A student should be able to read this lesson alone and learn the material as well as they would in a real classroom or instructor-led training session.
 
 Certification: ${options.certificationName}
 Module: ${options.moduleTitle}
-${options.moduleDescription ? `Description: ${options.moduleDescription}` : ''}
-Difficulty Level: ${options.difficulty}/5 (${options.difficulty === 1 ? 'Beginner' : options.difficulty === 5 ? 'Expert' : 'Intermediate'})
-Estimated Time: ${options.estimatedMinutes} minutes
+${options.moduleDescription ? `Module description: ${options.moduleDescription}` : ''}
+Difficulty: ${options.difficulty}/5 (${difficultyLabel})
+Estimated study time: ${options.estimatedMinutes} minutes
 
-Create a structured lesson with the following sections:
+Mandatory standards:
+- Match the depth and accuracy of the official syllabus or exam blueprint for "${options.certificationName}". If the cert has published objectives, weight your coverage to mirror them.
+- Use formal definitions where applicable. Introduce the precise term, then explain it plainly. Include any standard notation, formulas, or canonical diagrams a textbook would include (described in prose).
+- Cite the canonical sources, frameworks, RFCs, equations, or laws by name (e.g. "the AWS Well-Architected Framework", "RFC 5246", "Bloom's Taxonomy", "Section 230"). Do not invent citations.
+- Where a topic has competing schools of thought or trade-offs, present both honestly.
+- Every example should be a worked example: state the problem, walk through the reasoning step-by-step, end with the result and why it matters.
 
-1. **Introduction**
-   - Overview paragraph (2-3 sentences explaining what this lesson covers)
-   - 3-5 Learning objectives (clear, actionable)
-   - 3-5 Key takeaways (what students will remember)
+Structure (return as JSON exactly in the shape below):
 
-2. **Core Concepts** (3-5 concepts)
-   Each concept should have:
-   - Clear title
-   - Detailed explanation (2-3 paragraphs, beginner-friendly)
-   - 2-3 practical examples
-   - 1-2 analogies to help understanding
+1. INTRODUCTION
+   - "overview": 4–6 sentences. State what the lesson covers, why it matters in the field, and how it fits into the broader certification objectives.
+   - "learning_objectives": 5–7 specific, measurable objectives, each starting with a Bloom's-style verb (Define, Explain, Compare, Apply, Analyse, Evaluate, Design).
+   - "key_takeaways": 5–7 concise statements of what the student must remember after completing the lesson.
 
-3. **Practical Applications**
-   - 3-5 Real-world scenarios where this knowledge is used
-   - 3-5 Common use cases
-   - 3-5 Best practices
+2. CORE CONCEPTS (5–7 concepts — this is the bulk of the lesson)
+   Each concept object has:
+   - "title": precise topic name.
+   - "explanation": **4–6 paragraphs** of rigorous prose. Open with the formal definition, then unpack the mechanics, then discuss when and why it applies. Use the same language a domain expert would use, but define every term the first time it appears. This is the section that should feel like a textbook chapter.
+   - "examples": **3–5 worked examples**. Each is a 3–6 sentence mini case study: setup, reasoning, conclusion. Use realistic numbers, names, scenarios — never placeholders like "Company X".
+   - "analogies": 1–2 carefully chosen analogies that genuinely illuminate the concept (no strained metaphors).
 
-4. **Summary**
-   - Recap paragraph (what was covered)
-   - Key points list (5-7 bullet points)
-   - Next steps (what to learn next)
+3. PRACTICAL APPLICATIONS
+   - "real_world_scenarios": 4–6 detailed scenarios (2–4 sentences each) where this knowledge is applied in industry / on the exam.
+   - "common_use_cases": 4–6 bullets, each one sentence.
+   - "best_practices": 5–8 actionable best practices that a working professional would follow.
 
-Make the content engaging, clear, and appropriate for the difficulty level. Use simple language, avoid jargon unless necessary, and always explain technical terms.
+4. SUMMARY
+   - "recap": a 4–6 sentence paragraph synthesising what was learned.
+   - "key_points": 6–10 bullet points capturing the must-remember items.
+   - "next_steps": 3–5 concrete suggestions for what to study next within the certification path.
 
-Return ONLY valid JSON in this exact structure:
+Write at a level appropriate for the difficulty (currently ${difficultyLabel}). Adjust register accordingly: at lower levels, build intuition before formality; at higher levels, assume foundational knowledge and dive into nuance.
+
+Return ONLY valid JSON in this exact structure (no markdown, no commentary):
 {
   "intro": {
     "overview": "...",
@@ -106,8 +129,8 @@ Return ONLY valid JSON in this exact structure:
   "concepts": [
     {
       "title": "...",
-      "explanation": "...",
-      "examples": ["...", "..."],
+      "explanation": "Paragraph 1...\\n\\nParagraph 2...\\n\\nParagraph 3...\\n\\nParagraph 4...",
+      "examples": ["Worked example 1...", "Worked example 2...", "Worked example 3..."],
       "analogies": ["...", "..."]
     }
   ],
@@ -126,11 +149,15 @@ Return ONLY valid JSON in this exact structure:
   try {
     const openai = getOpenAIClient()
     const completion = await openai.chat.completions.create({
-      model: 'gpt-3.5-turbo',
+      // gpt-4o-mini gives us textbook-grade depth in JSON at a price point
+      // that lets us afford full course builds. It also has a much larger
+      // output window than gpt-3.5-turbo, which we need now that lessons are
+      // multi-thousand words.
+      model: 'gpt-4o-mini',
       messages: [
         {
           role: 'system',
-          content: `${arcanaCore()}\n\nRight now you are writing lesson content for the user. Be concrete, use real examples, and avoid stock textbook phrasing. Always respond with valid JSON only, no markdown formatting.`,
+          content: `${arcanaCore()}\n\nRight now you are an experienced subject-matter instructor writing rigorous, classroom-accurate lesson content. Match the depth of a university course or accredited training programme. Be specific, cite canonical sources by name, avoid filler, never hallucinate certifications or frameworks that don't exist. Always respond with valid JSON only, no markdown formatting.`,
         },
         {
           role: 'user',
@@ -138,7 +165,10 @@ Return ONLY valid JSON in this exact structure:
         },
       ],
       response_format: { type: 'json_object' },
-      temperature: 0.7,
+      temperature: 0.5,
+      // Enough headroom for a full textbook-style lesson. gpt-4o-mini's
+      // output cap is ~16k so we leave a comfortable buffer.
+      max_tokens: 8000,
     })
 
     const responseText = completion.choices[0]?.message?.content || '{}'
@@ -181,26 +211,28 @@ export async function generateLessonStructure(
     throw new Error('OpenAI API key is not configured')
   }
 
-  const prompt = `Break down this module into structured lessons:
+  const prompt = `You are designing the lesson plan for a module in an accredited certification programme. Match the structure that a published textbook or instructor-led course would use.
 
 Module: ${moduleTitle}
 ${moduleDescription ? `Description: ${moduleDescription}` : ''}
-Estimated Time: ${estimatedHours} hours
+Estimated total study time: ${estimatedHours} hours
 
-Create a logical sequence of lessons that cover all the material. Each lesson should be:
-- Focused on a specific topic
-- 10-30 minutes in length
-- Progressively building on previous lessons
-- Clear title and description
+Requirements:
+- Produce 4–8 lessons that, together, cover every concept this module's name implies. Mirror the official exam blueprint where one exists.
+- Order them strictly progressively: each lesson assumes only knowledge from previous lessons in this module (and earlier modules).
+- Each lesson is a self-contained chapter of 25–45 minutes of careful reading and reflection.
+- Title each lesson as a real chapter would be titled — descriptive, not cute.
+- The description (1–2 sentences) names the specific sub-topics covered.
+- Difficulty climbs gradually across the module (e.g. 2 → 2 → 3 → 3 → 4).
 
 Return ONLY valid JSON in this structure:
 {
   "lessons": [
     {
-      "title": "Lesson Title",
-      "description": "What this lesson covers",
+      "title": "Lesson title",
+      "description": "Specific sub-topics covered",
       "order": 1,
-      "estimated_minutes": 15,
+      "estimated_minutes": 30,
       "difficulty": 2
     }
   ]
@@ -209,11 +241,11 @@ Return ONLY valid JSON in this structure:
   try {
     const openai = getOpenAIClient()
     const completion = await openai.chat.completions.create({
-      model: 'gpt-3.5-turbo',
+      model: 'gpt-4o-mini',
       messages: [
         {
           role: 'system',
-          content: `${arcanaCore()}\n\nRight now you are designing a lesson plan for the user. Build a clean, progressive sequence. Always respond with valid JSON only.`,
+          content: `${arcanaCore()}\n\nRight now you are an experienced curriculum designer planning a textbook-quality module for a certification. Build a clean, progressive sequence that mirrors the rigour of accredited training. Always respond with valid JSON only.`,
         },
         {
           role: 'user',
@@ -221,7 +253,7 @@ Return ONLY valid JSON in this structure:
         },
       ],
       response_format: { type: 'json_object' },
-      temperature: 0.7,
+      temperature: 0.5,
     })
 
     const responseText = completion.choices[0]?.message?.content || '{}'

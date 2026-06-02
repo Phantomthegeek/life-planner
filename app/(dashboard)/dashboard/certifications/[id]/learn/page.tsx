@@ -363,7 +363,7 @@ export default function LearnPage() {
           lesson_description: selectedLesson.description,
           certification_name: certificationName,
           difficulty: selectedLesson.difficulty_level || 2,
-          num_questions: 5,
+          num_questions: 10,
         }),
       })
       if (!res.ok) {
