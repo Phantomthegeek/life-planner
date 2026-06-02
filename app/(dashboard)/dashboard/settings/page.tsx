@@ -25,12 +25,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
-import { Sun, Moon, Monitor, Loader2, Save, Bell, Upload, Trash2 } from 'lucide-react'
+import { Sun, Moon, Monitor, Loader2, Save, Bell, Upload, Trash2, Smartphone } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { createClient } from '@/lib/supabase/client'
 import { ThemeSelector } from '@/components/theme-selector'
 import { applyTheme, getSavedTheme, getThemeBaseId, type ThemeId } from '@/lib/theme-utils'
 import { ExportDialog } from '@/components/export-import/export-dialog'
+import { InstallButton } from '@/components/pwa/install-button'
+import { usePwaInstall } from '@/hooks/use-pwa-install'
 
 // Only the fields that the rest of the app actually reads. wake/sleep/work
 // hours feed the AI coach; full_name shows up in greetings.
@@ -53,6 +55,7 @@ const DEFAULT_SETTINGS: ProfileSettings = {
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme()
   const { toast } = useToast()
+  const { isInstalled, platform } = usePwaInstall()
 
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -68,6 +71,15 @@ export default function SettingsPage() {
     fetchSettings()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // The header dropdown deep-links to #install. Scroll the card into view.
+  useEffect(() => {
+    if (loading) return
+    if (typeof window === 'undefined') return
+    if (window.location.hash !== '#install') return
+    const el = document.getElementById('install')
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [loading])
 
   const fetchSettings = async () => {
     const supabase = createClient()
@@ -338,6 +350,50 @@ export default function SettingsPage() {
           <Button variant="outline" asChild>
             <Link href="/dashboard/settings/notifications">Open notification settings</Link>
           </Button>
+        </CardContent>
+      </Card>
+
+      <Card id="install" className="scroll-mt-24">
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Smartphone className="h-4 w-4" /> Install app
+          </CardTitle>
+          <CardDescription>
+            Add Arcana to your home screen or dock so it launches like a native
+            app and works offline.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {isInstalled ? (
+            <p className="text-sm text-muted-foreground">
+              Arcana is already installed on this device. Launch it from your
+              home screen or app launcher.
+            </p>
+          ) : (
+            <>
+              <InstallButton
+                variant="default"
+                size="default"
+                label={
+                  platform === 'ios-safari' || platform === 'macos-safari'
+                    ? 'Show install instructions'
+                    : 'Install Arcana'
+                }
+              />
+              <p className="text-xs text-muted-foreground">
+                {platform === 'ios-safari' &&
+                  'Safari doesn\u2019t have a one-tap install, so we\u2019ll walk you through Share \u2192 Add to Home Screen.'}
+                {platform === 'macos-safari' &&
+                  'Safari 17+ supports Add to Dock from the File menu \u2014 click above for the exact steps.'}
+                {platform === 'chromium' &&
+                  'On Chrome, Edge or Brave, this triggers the browser\u2019s install prompt. If nothing happens, look for an install icon in the address bar.'}
+                {platform === 'firefox' &&
+                  'Firefox doesn\u2019t support installing web apps the same way \u2014 we\u2019ll show what to try instead.'}
+                {platform === 'unsupported' &&
+                  'Open Arcana in Chrome, Edge, Brave, or Safari to install it.'}
+              </p>
+            </>
+          )}
         </CardContent>
       </Card>
 

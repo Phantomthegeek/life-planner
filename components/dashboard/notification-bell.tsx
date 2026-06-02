@@ -89,7 +89,12 @@ export function NotificationBell() {
           )}
         </button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-80 p-0">
+      <PopoverContent
+        align="end"
+        sideOffset={8}
+        collisionPadding={8}
+        className="w-[calc(100vw-1rem)] max-w-sm sm:w-80 p-0"
+      >
         <div className="p-3 border-b border-border flex items-center justify-between">
           <div>
             <p className="text-sm font-medium">Upcoming</p>

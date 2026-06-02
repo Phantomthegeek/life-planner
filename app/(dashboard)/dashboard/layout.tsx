@@ -27,8 +27,14 @@ export default async function DashboardLayout({
         {/* Header is fixed h-14 (3.5rem). We need that as a minimum, plus a
             little breathing room. Splitting horizontal / vertical padding so
             the `p-4` shorthand doesn't clobber `pt-*` — that's the bug that
-            was causing the header to overlap content. */}
-        <main className="pt-[4.5rem] px-4 pb-4 md:pt-20 md:px-6 md:pb-6">
+            was causing the header to overlap content. The bottom inline-style
+            padding keeps content above the iOS home indicator in PWA mode. */}
+        <main
+          className="pt-[4.5rem] px-4 pb-4 md:pt-20 md:px-6 md:pb-6"
+          style={{
+            paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))',
+          }}
+        >
           {children}
         </main>
       </div>

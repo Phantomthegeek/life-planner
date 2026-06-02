@@ -14,6 +14,8 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { createClient } from '@/lib/supabase/client'
 import { GlobalSearch } from '@/components/search/global-search'
 import { NotificationBell } from '@/components/dashboard/notification-bell'
+import { usePwaInstall } from '@/hooks/use-pwa-install'
+import { Download } from 'lucide-react'
 
 // Top bar that sits above the dashboard content. Search lives on the left,
 // account menu on the right. Anchored beside the sidebar on desktop (md+)
@@ -22,6 +24,13 @@ export function Header() {
   const [name, setName] = useState('User')
   const [initials, setInitials] = useState('U')
   const router = useRouter()
+  const { isInstalled, platform } = usePwaInstall()
+
+  // Show the "Install app" menu item to anyone who isn't already installed,
+  // as long as the platform has *some* path forward (native prompt OR
+  // platform-specific instructions). InstallButton handles the dialog logic.
+  const showInstallEntry =
+    !isInstalled && platform !== 'unsupported'
 
   useEffect(() => {
     const supabase = createClient()
@@ -89,7 +98,7 @@ export function Header() {
           </span>
           <ChevronDown className="h-3.5 w-3.5 text-muted-foreground hidden sm:block" />
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-44 z-[60]">
+        <DropdownMenuContent align="end" className="w-48 z-[60]">
           <DropdownMenuItem
             onSelect={() => router.push('/dashboard/settings')}
             className="cursor-pointer"
@@ -102,6 +111,22 @@ export function Header() {
           >
             Profile
           </DropdownMenuItem>
+          {showInstallEntry && (
+            <>
+              <DropdownMenuSeparator />
+              {/* Route to settings, which renders the full InstallButton with
+                  its instructions dialog. Doing the dialog from inside the
+                  dropdown gets messy because the dropdown closes on item
+                  select before the dialog can take focus. */}
+              <DropdownMenuItem
+                onSelect={() => router.push('/dashboard/settings#install')}
+                className="cursor-pointer"
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Install app
+              </DropdownMenuItem>
+            </>
+          )}
           <DropdownMenuSeparator />
           <DropdownMenuItem onSelect={logout} className="cursor-pointer text-destructive focus:text-destructive">
             Log out

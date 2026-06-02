@@ -16,6 +16,16 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import {
   BookOpen,
   ArrowLeft,
   Brain,
@@ -106,17 +116,44 @@ export default function LearnPage() {
   const [lessons, setLessons] = useState<Lesson[]>([])
   const [selectedModuleId, setSelectedModuleId] = useState<string | null>(null)
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null)
+  // On desktop the modules panel sits beside the content. On mobile it's an
+  // overlay drawer that defaults to closed so the lesson is actually readable.
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [isMobile, setIsMobile] = useState(false)
   const [generating, setGenerating] = useState(false)
   const [completedLessons, setCompletedLessons] = useState<Set<string>>(new Set())
   const [certificationName, setCertificationName] = useState<string>('')
   const [quizOpen, setQuizOpen] = useState(false)
   const [quizLoading, setQuizLoading] = useState(false)
   const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([])
+  // Confirmation dialog for regenerate (mobile-friendly replacement for confirm()).
+  const [regenConfirmOpen, setRegenConfirmOpen] = useState(false)
+  const [regenTargetModule, setRegenTargetModule] = useState<{
+    moduleId: string
+    existingCount: number
+  } | null>(null)
+  // Confirmation dialog for per-lesson delete.
+  const [deleteLessonTarget, setDeleteLessonTarget] = useState<string | null>(null)
 
   useEffect(() => {
     setCompletedLessons(loadCompleted(certId))
   }, [certId])
+
+  // Track viewport so we can default the drawer to closed on mobile and make
+  // sidebar interactions behave like a modal overlay there.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const mql = window.matchMedia('(max-width: 767px)')
+    const apply = () => {
+      const mobile = mql.matches
+      setIsMobile(mobile)
+      // Auto-close drawer when crossing into mobile; auto-open on desktop.
+      setSidebarOpen(!mobile)
+    }
+    apply()
+    mql.addEventListener('change', apply)
+    return () => mql.removeEventListener('change', apply)
+  }, [])
 
   const totalLessons = lessons.length
   const completedCount = useMemo(
@@ -288,13 +325,15 @@ export default function LearnPage() {
 
       const data = await response.json().catch(() => ({}))
 
-      // 409 = lessons already exist. Confirm with the user before clobbering.
+      // 409 = lessons already exist. Pop a real dialog instead of window.confirm
+      // so the experience is tolerable on mobile.
       if (response.status === 409) {
-        const confirmed = window.confirm(
-          `This module already has ${data.existing_count ?? 'some'} lessons. Regenerate and replace them?`
-        )
-        if (!confirmed) return
-        return handleGenerateLessons(moduleId, true)
+        setRegenTargetModule({
+          moduleId,
+          existingCount: typeof data.existing_count === 'number' ? data.existing_count : 0,
+        })
+        setRegenConfirmOpen(true)
+        return
       }
 
       if (!response.ok) {
@@ -320,8 +359,10 @@ export default function LearnPage() {
     }
   }
 
-  const handleDeleteLesson = async (lessonId: string) => {
-    if (!window.confirm('Delete this lesson? Its content will be removed.')) return
+  const confirmDeleteLesson = async () => {
+    const lessonId = deleteLessonTarget
+    if (!lessonId) return
+    setDeleteLessonTarget(null)
     try {
       const res = await fetch(
         `/api/certifications/${certId}/lessons?lesson_id=${lessonId}`,
@@ -362,8 +403,17 @@ export default function LearnPage() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
-      {/* Sidebar - Table of Contents */}
+    <div className="flex h-[calc(100vh-4rem)] overflow-hidden relative">
+      {/* Backdrop only matters when the drawer is opened on mobile. */}
+      {isMobile && sidebarOpen && (
+        <div
+          className="md:hidden fixed inset-0 bg-black/50 z-30"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar - Table of Contents. Overlay drawer on mobile (absolute +
+          z-40), inline column on desktop. */}
       <AnimatePresence>
         {sidebarOpen && (
           <motion.div
@@ -371,7 +421,7 @@ export default function LearnPage() {
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: -300, opacity: 0 }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="w-80 border-r bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex flex-col"
+            className="w-[85vw] max-w-sm md:w-80 border-r bg-background flex flex-col absolute inset-y-0 left-0 z-40 md:relative md:z-auto md:bg-background/95 md:backdrop-blur md:supports-[backdrop-filter]:bg-background/60"
           >
             <Card className="rounded-none border-x-0 border-t-0 h-full flex flex-col">
               <CardHeader className="border-b pb-4">
@@ -516,6 +566,7 @@ export default function LearnPage() {
                                         onClick={(e) => {
                                           e.stopPropagation()
                                           setSelectedLesson(lesson)
+                                          if (isMobile) setSidebarOpen(false)
                                         }}
                                       >
                                         {isDone ? (
@@ -539,16 +590,18 @@ export default function LearnPage() {
                                             </span>
                                           </div>
                                         </div>
+                                        {/* Always visible on touch (md:opacity-0 means
+                                            hover-revealed only on desktop+). */}
                                         <button
                                           type="button"
                                           aria-label="Delete lesson"
-                                          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive flex-shrink-0"
+                                          className="md:opacity-0 md:group-hover:opacity-100 transition-opacity p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive flex-shrink-0"
                                           onClick={(e) => {
                                             e.stopPropagation()
-                                            handleDeleteLesson(lesson.id)
+                                            setDeleteLessonTarget(lesson.id)
                                           }}
                                         >
-                                          <Trash2 className="h-3 w-3" />
+                                          <Trash2 className="h-3.5 w-3.5" />
                                         </button>
                                       </div>
                                     )
@@ -569,22 +622,25 @@ export default function LearnPage() {
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden relative">
-        {/* Top Bar */}
-        <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        {/* Top Bar - stacks on small screens so the title isn't squeezed
+            between the menu button and the action buttons. */}
+        <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-3 py-3 md:px-6 md:py-4 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2 md:gap-4 min-w-0 flex-1">
             {!sidebarOpen && (
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => setSidebarOpen(true)}
+                className="flex-shrink-0"
+                aria-label="Open modules"
               >
                 <Menu className="h-5 w-5" />
               </Button>
             )}
             {selectedModule && (
-              <div>
-                <h2 className="text-xl font-semibold">{selectedModule.title}</h2>
-                <p className="text-sm text-muted-foreground">
+              <div className="min-w-0">
+                <h2 className="text-base md:text-xl font-semibold truncate">{selectedModule.title}</h2>
+                <p className="text-xs md:text-sm text-muted-foreground truncate">
                   {moduleLessons.length} lesson{moduleLessons.length !== 1 ? 's' : ''}
                   {moduleProgress.total > 0 && (
                     <>
@@ -592,9 +648,9 @@ export default function LearnPage() {
                       <span className="text-foreground font-medium">
                         {moduleProgress.complete}/{moduleProgress.total}
                       </span>
-                      {' modules done'}
+                      <span className="hidden sm:inline"> modules done</span>
                       {totalLessons > 0 && (
-                        <span className="text-muted-foreground">
+                        <span className="text-muted-foreground hidden sm:inline">
                           {' '}({completedCount}/{totalLessons} lessons)
                         </span>
                       )}
@@ -605,16 +661,17 @@ export default function LearnPage() {
             )}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-shrink-0">
             <Button
               variant="outline"
               size="sm"
               onClick={openQuickQuiz}
               disabled={!selectedLesson}
               title={selectedLesson ? 'Generate a 5-question quiz on this lesson' : 'Select a lesson first'}
+              className="h-9"
             >
-              <Trophy className="mr-2 h-4 w-4" />
-              Quick Quiz
+              <Trophy className="h-4 w-4 md:mr-2" />
+              <span className="hidden md:inline">Quick Quiz</span>
             </Button>
             <Link
               href={
@@ -627,9 +684,9 @@ export default function LearnPage() {
                   : '/dashboard/chat'
               }
             >
-              <Button variant="outline" size="sm">
-                <Brain className="mr-2 h-4 w-4" />
-                Ask Arcana
+              <Button variant="outline" size="sm" className="h-9">
+                <Brain className="h-4 w-4 md:mr-2" />
+                <span className="hidden md:inline">Ask Arcana</span>
               </Button>
             </Link>
           </div>
@@ -637,7 +694,7 @@ export default function LearnPage() {
 
         {/* Lesson Content */}
         <ScrollArea className="flex-1">
-          <div className="container max-w-5xl mx-auto p-6">
+          <div className="container max-w-5xl mx-auto p-4 md:p-6">
             {selectedLesson ? (
               <LessonViewer
                 lesson={{
@@ -721,6 +778,67 @@ export default function LearnPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Regenerate confirmation - replaces window.confirm so it works
+          properly on touch devices. */}
+      <AlertDialog
+        open={regenConfirmOpen}
+        onOpenChange={(open) => {
+          setRegenConfirmOpen(open)
+          if (!open) setRegenTargetModule(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Regenerate lessons?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This module already has{' '}
+              {regenTargetModule?.existingCount
+                ? `${regenTargetModule.existingCount} lessons`
+                : 'lessons'}
+              . Regenerating will replace them with new AI-generated content.
+              Your local progress for this module will be cleared.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                const target = regenTargetModule
+                setRegenConfirmOpen(false)
+                setRegenTargetModule(null)
+                if (target) handleGenerateLessons(target.moduleId, true)
+              }}
+            >
+              Regenerate
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Per-lesson delete confirmation. */}
+      <AlertDialog
+        open={!!deleteLessonTarget}
+        onOpenChange={(open) => {
+          if (!open) setDeleteLessonTarget(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this lesson?</AlertDialogTitle>
+            <AlertDialogDescription>
+              The lesson content will be removed permanently. You can regenerate
+              the whole module later if you change your mind.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteLesson}>
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
