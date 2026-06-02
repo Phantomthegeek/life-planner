@@ -98,11 +98,11 @@ export async function exportData(
 
   if (format === 'json') {
     content = await exportToJSON(data)
-    filename = `little-einstein-export-${timestamp}.json`
+    filename = `arcana-export-${timestamp}.json`
     mimeType = 'application/json'
   } else {
     content = exportToCSV(data)
-    filename = `little-einstein-export-${timestamp}.csv`
+    filename = `arcana-export-${timestamp}.csv`
     mimeType = 'text/csv'
   }
 

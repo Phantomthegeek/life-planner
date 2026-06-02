@@ -10,14 +10,19 @@ import { PWAHead } from '@/components/pwa/pwa-head'
 
 const inter = Inter({ subsets: ['latin'] })
 
-// Get app URL for metadata - use environment variable or fallback
+// Get app URL for metadata. Prefer NEXT_PUBLIC_APP_URL (set per environment in
+// Vercel), then VERCEL_URL which is auto-injected for every deployment, then
+// localhost so the metadata is always valid in dev. We deliberately don't
+// hardcode a production domain here — the env should be the single source of
+// truth so previews and production each generate correct absolute URLs.
 const getMetadataBase = () => {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://life-planner.vercel.app'
-  // Ensure it's a valid URL
+  const explicit = process.env.NEXT_PUBLIC_APP_URL
+  const vercel = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined
+  const candidate = explicit || vercel || 'http://localhost:3000'
   try {
-    return new URL(appUrl)
+    return new URL(candidate)
   } catch {
-    return new URL('https://life-planner.vercel.app')
+    return new URL('http://localhost:3000')
   }
 }
 

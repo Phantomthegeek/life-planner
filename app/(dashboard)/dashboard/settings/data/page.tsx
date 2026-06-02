@@ -27,7 +27,7 @@ export default function DataManagementPage() {
 
       // Export data
       const jsonData = exportData({ tasks, habits, notes })
-      const filename = `little-einstein-export-${new Date().toISOString().split('T')[0]}.json`
+      const filename = `arcana-export-${new Date().toISOString().split('T')[0]}.json`
       
       downloadFile(jsonData, filename)
 

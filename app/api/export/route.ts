@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(exportDataContent, {
         headers: {
           'Content-Type': 'application/json',
-          'Content-Disposition': `attachment; filename="little-einstein-export-${new Date().toISOString().split('T')[0]}.json"`,
+          'Content-Disposition': `attachment; filename="arcana-export-${new Date().toISOString().split('T')[0]}.json"`,
         },
       })
     }
