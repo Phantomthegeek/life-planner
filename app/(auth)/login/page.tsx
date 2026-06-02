@@ -14,10 +14,8 @@ import {
   Eye, 
   EyeOff, 
   Mail, 
-  Lock, 
-  Sparkles,
-  ArrowRight,
-  CheckCircle2
+  Lock,
+  CheckCircle2,
 } from 'lucide-react'
 import { getAppUrl } from '@/lib/utils'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -207,53 +205,24 @@ export default function LoginPage() {
   }, [])
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-gradient-to-br from-[#2A2D7C] via-[#1a1d4f] to-[#0f1120] p-4">
-      {/* Animated Background Elements */}
-      <div className="absolute inset-0 overflow-hidden">
-        {/* Floating orbs */}
-        <div className="absolute top-20 left-10 w-72 h-72 bg-[#9C6ADE]/20 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-20 right-10 w-96 h-96 bg-[#00C1B3]/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
-        <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-[#4D7CFE]/20 rounded-full blur-3xl animate-pulse delay-2000"></div>
-        
-        {/* Constellation pattern */}
-        <div className="absolute inset-0 opacity-30">
-          {Array.from({ length: 50 }).map((_, i) => (
-            <div
-              key={i}
-              className="absolute w-1 h-1 bg-white rounded-full animate-pulse"
-              style={{
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-                animationDelay: `${Math.random() * 3}s`,
-                animationDuration: `${2 + Math.random() * 2}s`,
-              }}
-            />
-          ))}
-        </div>
-      </div>
-
-      <Card className="w-full max-w-md relative z-10 backdrop-blur-xl bg-white/95 dark:bg-gray-900/95 border-2 border-white/20 shadow-2xl">
-        <CardHeader className="space-y-1 text-center pb-6 md:pb-8 pt-6 md:pt-8">
-          {/* Animated Logo */}
-          <div className="flex justify-center mb-6">
-            <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-[#2A2D7C] to-[#9C6ADE] rounded-2xl blur-lg opacity-50 animate-pulse"></div>
-              <div className="relative rounded-2xl bg-gradient-to-br from-[#2A2D7C]/20 via-[#9C6ADE]/20 to-[#00C1B3]/20 p-5 shadow-lg border border-white/20">
-                <Brain className="h-12 w-12 text-[#2A2D7C] dark:text-[#9C6ADE] animate-pulse" />
-                <Sparkles className="h-4 w-4 text-[#FFBD44] absolute -top-1 -right-1 animate-bounce" />
-              </div>
+    <div className="min-h-screen flex items-center justify-center bg-[#0f1120] p-4">
+      <Card className="w-full max-w-md border-white/10 bg-gray-950/80 backdrop-blur shadow-xl">
+        <CardHeader className="space-y-2 text-center pt-8 pb-6">
+          <div className="flex justify-center mb-4">
+            <div className="rounded-xl bg-[#2A2D7C]/15 p-3 border border-white/10">
+              <Brain className="h-8 w-8 text-[#9C6ADE]" />
             </div>
           </div>
-          
-          <CardTitle className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-[#2A2D7C] via-[#9C6ADE] to-[#00C1B3] bg-clip-text text-transparent animate-gradient">
+
+          <CardTitle className="text-3xl font-semibold tracking-tight text-white">
             Arcana
           </CardTitle>
-          <CardDescription className="text-base mt-3 text-gray-600 dark:text-gray-300">
-            {mode === 'forgot' 
-              ? 'Reset your password'
+          <CardDescription className="text-sm text-gray-400">
+            {mode === 'forgot'
+              ? 'Reset your password.'
               : mode === 'signup'
-              ? 'Start your productivity journey'
-              : 'Your intelligent productivity companion'}
+                ? 'Create your account.'
+                : 'Sign in to keep going.'}
           </CardDescription>
         </CardHeader>
 
@@ -381,22 +350,26 @@ export default function LoginPage() {
                 </div>
               )}
 
-              {/* Submit Button */}
-              <Button 
-                type="submit" 
-                className="w-full bg-gradient-to-r from-[#2A2D7C] to-[#9C6ADE] hover:from-[#3A3F9C] hover:to-[#AC7ADE] text-white shadow-lg hover:shadow-xl transition-all duration-300 h-11 font-semibold" 
+              <Button
+                type="submit"
+                className="w-full bg-[#9C6ADE] hover:bg-[#AC7ADE] text-white h-10"
                 disabled={loading}
               >
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {mode === 'forgot' ? 'Sending...' : mode === 'signup' ? 'Creating account...' : 'Signing in...'}
+                    {mode === 'forgot'
+                      ? 'Sending…'
+                      : mode === 'signup'
+                        ? 'Creating account…'
+                        : 'Signing in…'}
                   </>
+                ) : mode === 'forgot' ? (
+                  'Send reset link'
+                ) : mode === 'signup' ? (
+                  'Create account'
                 ) : (
-                  <>
-                    {mode === 'forgot' ? 'Send Reset Link' : mode === 'signup' ? 'Create Account' : 'Sign In'}
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </>
+                  'Sign in'
                 )}
               </Button>
 

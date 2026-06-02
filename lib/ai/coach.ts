@@ -1,9 +1,10 @@
 import OpenAI from 'openai'
 import { AICoachResponse, Task, Habit } from '@/lib/types'
-import { Database } from '@/lib/supabase/database.types'
-import { buildContextBundle, AIContextBundle } from './context-builder'
+import { arcanaCore } from './personality'
 
-// Lazy initialization to avoid build-time errors
+// Constructed on first call instead of at import time so `next build` doesn't
+// blow up in environments where OPENAI_API_KEY isn't set (CI, Vercel preview
+// before envs are wired, etc.).
 function getOpenAIClient(): OpenAI {
   const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) {
@@ -45,42 +46,35 @@ export async function generateDailyPlan(
     date,
   } = options
 
-  const systemPrompt = `You are an AI life coach and study planner. You help users create optimized daily schedules that balance work, study, habits, and rest.
+  const systemPrompt = `${arcanaCore()}
 
-You must always respond with valid JSON in this exact structure:
+Right now you are acting as the user's day planner. Design a schedule they can actually follow today.
+
+Respond with VALID JSON in exactly this shape (no extra fields, no prose outside JSON):
 {
-  "summary": "A brief 2-3 sentence summary of the day",
+  "summary": "2-3 sentence overview written in your normal voice, addressing the user directly.",
   "schedule": [
     {
-      "start": "2025-03-19T09:00:00",
-      "end": "2025-03-19T10:00:00",
-      "title": "Task name",
+      "start": "${date}T09:00:00",
+      "end": "${date}T10:00:00",
+      "title": "Short, specific task name",
       "category": "study|work|break|habit|personal",
-      "notes": "Optional helpful notes"
+      "notes": "Optional one-sentence tip"
     }
   ],
-  "actions": ["Actionable item 1", "Actionable item 2"],
-  "estimates": {
-    "total_minutes": 480
-  },
-  "motivation": "An encouraging message"
+  "actions": ["Optional list of one-off action items not on the schedule"],
+  "estimates": { "total_minutes": 480 },
+  "motivation": "One short, sincere line. No clichés. No exclamation marks unless it really earns one."
 }
 
-Consider:
-- User's wake time: ${userPreferences.wake_time}
-- Sleep time: ${userPreferences.sleep_time}
-- Work hours: ${userPreferences.work_hours_start} - ${userPreferences.work_hours_end}
-- Energy levels (morning = high, afternoon = medium, evening = low)
-- Existing tasks for the day
-- Certification study goals
-- Daily habits
-- Work-life balance
-- Mode: ${mode} (light = easier day, intense = challenging day)
-- Leave buffer time between tasks
-- Include breaks
-- Schedule habits at appropriate times
-
-Date: ${date}`
+Rules:
+- Respect their wake time ${userPreferences.wake_time} and sleep time ${userPreferences.sleep_time}.
+- Heavy focus work happens inside ${userPreferences.work_hours_start}–${userPreferences.work_hours_end}.
+- Morning = high energy, afternoon = medium, evening = low.
+- Leave a small buffer between blocks. Include real breaks.
+- Schedule habits at sensible times (e.g. workout pre-work, reading evening).
+- Mode "${mode}": light = fewer blocks and longer breaks; intense = denser deep-work; normal = balanced.
+- All timestamps must be on ${date}.`
 
   const userPrompt = `Create my daily plan for ${date}.
 
@@ -120,13 +114,14 @@ Create an optimized schedule that fits within my preferences and includes time f
         { role: 'user', content: userPrompt },
       ],
       response_format: { type: 'json_object' },
-      temperature: 0.7,
+      temperature: 0.6,
     })
 
     const responseText = completion.choices[0]?.message?.content || '{}'
     const parsed = JSON.parse(responseText)
 
-    // Validate and transform response
+    // Defaults guard against the model omitting fields. The UI assumes these
+    // shapes exist; we'd rather render a thin plan than crash.
     return {
       summary: parsed.summary || 'Your daily plan is ready!',
       schedule: Array.isArray(parsed.schedule) ? parsed.schedule : [],
@@ -136,36 +131,49 @@ Create an optimized schedule that fits within my preferences and includes time f
     }
   } catch (error: any) {
     console.error('Error generating AI plan:', error)
-    
-    // Provide more specific error messages
+
+    // Translate OpenAI's various failure modes into actionable user-facing
+    // messages. Don't leak stack traces or model names; just tell the user
+    // what to do next.
     if (error?.message?.includes('API key')) {
-      throw new Error('OpenAI API key is invalid or missing. Please check your .env.local file and restart the server.')
+      throw new Error(
+        'OpenAI API key is invalid or missing. Please check your .env.local file and restart the server.'
+      )
     }
-    
+
     if (error?.status === 401 || error?.message?.includes('401')) {
       throw new Error('OpenAI API authentication failed. Please check your API key.')
     }
-    
-    // Rate limit error - provide helpful guidance
-    if (error?.status === 429 || error?.message?.includes('429') || error?.code === 'rate_limit_exceeded') {
+
+    if (
+      error?.status === 429 ||
+      error?.message?.includes('429') ||
+      error?.code === 'rate_limit_exceeded'
+    ) {
+      // OpenAI sometimes returns a Retry-After header; surface it so the user
+      // knows whether to wait 30s or come back tomorrow.
       const retryAfter = error?.headers?.['retry-after'] || error?.retryAfter
-      const message = retryAfter 
+      const message = retryAfter
         ? `OpenAI API rate limit exceeded. Please try again in ${retryAfter} seconds.`
         : `OpenAI API rate limit exceeded. This usually means:\n\n1. You're on the free tier with low limits (check: https://platform.openai.com/account/usage)\n2. You've hit daily/monthly limits\n3. Adding a payment method increases limits significantly\n\nPlease wait a few hours or check your OpenAI account status.`
       throw new Error(message)
     }
-    
+
     if (error?.message?.includes('JSON')) {
       throw new Error('Failed to parse AI response. Please try again.')
     }
-    
-    // Check for quota/credit issues
-    if (error?.message?.includes('insufficient_quota') || error?.code === 'insufficient_quota') {
-      throw new Error('OpenAI account has insufficient credits. Please add credits at https://platform.openai.com/account/billing')
+
+    if (
+      error?.message?.includes('insufficient_quota') ||
+      error?.code === 'insufficient_quota'
+    ) {
+      throw new Error(
+        'OpenAI account has insufficient credits. Please add credits at https://platform.openai.com/account/billing'
+      )
     }
-    
-    // Include the actual error message if available
-    const errorMessage = error?.message || error?.error?.message || error?.code || 'Unknown error'
+
+    const errorMessage =
+      error?.message || error?.error?.message || error?.code || 'Unknown error'
     throw new Error(`Failed to generate daily plan: ${errorMessage}`)
   }
 }

@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react'
 import Link from 'next/link'
 import { useTaskStore } from '@/stores/use-task-store'
+import { rewardTaskCompletion } from '@/lib/gamification-actions'
 import { useEffect } from 'react'
 
 export default function TimetablePage() {
@@ -33,6 +34,9 @@ export default function TimetablePage() {
       if (!response.ok) throw new Error('Failed to toggle task')
       
       const updated = await response.json()
+      if (updated.done && !task.done) {
+        rewardTaskCompletion()
+      }
       useTaskStore.getState().updateTask(task.id, updated)
     } catch (error) {
       console.error('Failed to toggle task:', error)

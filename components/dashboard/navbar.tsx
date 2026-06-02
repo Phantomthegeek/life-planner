@@ -65,11 +65,9 @@ export function Navbar() {
     <nav className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/60 shadow-sm">
       <div className="container flex h-16 items-center justify-between px-4">
         <div className="flex items-center gap-6">
-          <Link href="/dashboard" className="flex items-center gap-2 font-bold group transition-all">
-            <Brain className="h-6 w-6 text-primary group-hover:scale-110 transition-transform duration-200" />
-            <span className="hidden sm:inline bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-              Arcana
-            </span>
+          <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
+            <Brain className="h-5 w-5 text-primary" />
+            <span className="hidden sm:inline tracking-tight">Arcana</span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -108,17 +106,25 @@ export function Navbar() {
                 <span className="sr-only">Menu</span>
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-64">
+            <SheetContent side="left" className="w-64 z-[60]">
               <nav className="flex flex-col gap-2 mt-8">
                 {navItems.map((item) => {
                   const Icon = item.icon
                   const isActive = pathname === item.href || 
                     (item.href !== '/dashboard' && pathname?.startsWith(item.href))
                   return (
-                    <Link key={item.href} href={item.href} onClick={() => setMobileOpen(false)}>
+                    <Link 
+                      key={item.href} 
+                      href={item.href} 
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setMobileOpen(false)
+                      }}
+                      className="block"
+                    >
                       <Button
                         variant={isActive ? 'secondary' : 'ghost'}
-                        className="w-full justify-start gap-2"
+                        className="w-full justify-start gap-2 cursor-pointer"
                       >
                         <Icon className="h-4 w-4" />
                         {item.label}

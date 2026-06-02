@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Sparkles, Loader2, Calendar, TrendingUp, AlertCircle, Lightbulb, Target } from 'lucide-react'
+import { Loader2, Calendar, TrendingUp, AlertCircle, Lightbulb, Target } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { formatDate, subDays } from '@/lib/utils'
 
@@ -64,26 +64,22 @@ export default function WeeklyReviewPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Weekly AI Review</h1>
-        <p className="text-muted-foreground">
-          Get insights and recommendations based on your week&apos;s activities.
+        <h1 className="text-3xl font-semibold tracking-tight">Weekly review</h1>
+        <p className="text-muted-foreground mt-1">
+          Arcana reads your notes, tasks, and habits from the last 7 days and
+          tells you what actually happened.
         </p>
       </div>
 
       {!review ? (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-primary" />
-              Generate Weekly Review
-            </CardTitle>
-            <CardDescription>
-              AI will analyze your notes, tasks, and habits to provide insights
-            </CardDescription>
+            <CardTitle className="text-lg">Pick a week</CardTitle>
+            <CardDescription>The review covers 7 days from this date.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="weekStart">Week Start Date</Label>
+              <Label htmlFor="weekStart">Week start</Label>
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-muted-foreground" />
                 <Input
@@ -94,21 +90,15 @@ export default function WeeklyReviewPage() {
                   className="max-w-xs"
                 />
               </div>
-              <p className="text-sm text-muted-foreground">
-                Select the start date of the week you want to review
-              </p>
             </div>
-            <Button onClick={generateReview} disabled={loading} className="w-full">
+            <Button onClick={generateReview} disabled={loading}>
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Generating Review...
+                  Generating…
                 </>
               ) : (
-                <>
-                  <Sparkles className="mr-2 h-4 w-4" />
-                  Generate Weekly Review
-                </>
+                'Generate review'
               )}
             </Button>
           </CardContent>
@@ -174,20 +164,19 @@ export default function WeeklyReviewPage() {
             </Card>
           )}
 
-          {/* Patterns */}
           {review.patterns && review.patterns.length > 0 && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Lightbulb className="h-5 w-5 text-yellow-500" />
-                  Patterns & Insights
+                  Patterns &amp; insights
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2">
                   {review.patterns.map((pattern, idx) => (
                     <li key={idx} className="flex items-start gap-2">
-                      <span className="text-yellow-500 mt-1">💡</span>
+                      <Lightbulb className="h-4 w-4 text-yellow-500 mt-0.5 flex-shrink-0" />
                       <span>{pattern}</span>
                     </li>
                   ))}
@@ -243,7 +232,7 @@ export default function WeeklyReviewPage() {
           )}
 
           <Button variant="outline" onClick={() => setReview(null)}>
-            Generate New Review
+            New review
           </Button>
         </div>
       )}

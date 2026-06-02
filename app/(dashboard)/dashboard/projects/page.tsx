@@ -7,7 +7,19 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { useToast } from '@/hooks/use-toast'
+import { useUndo } from '@/hooks/use-undo'
+import { ToastAction } from '@/components/ui/toast'
 import { Plus, FolderOpen, Target, Calendar, CheckCircle2, Loader2, Edit, Trash2, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
 import { Progress } from '@/components/ui/progress'
@@ -18,13 +30,17 @@ export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [projectToDelete, setProjectToDelete] = useState<string | null>(null)
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [targetDate, setTargetDate] = useState('')
   const { toast } = useToast()
+  const { setUndo, performUndo } = useUndo()
 
   useEffect(() => {
     fetchProjects()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const fetchProjects = async () => {
@@ -89,11 +105,20 @@ export default function ProjectsPage() {
     }
   }
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this project?')) return
+  const handleDeleteClick = (id: string) => {
+    setProjectToDelete(id)
+    setDeleteDialogOpen(true)
+  }
+
+  const handleDelete = async () => {
+    if (!projectToDelete) return
+
+    // Store the project data before deletion for undo
+    const projectToRestore = projects.find(p => p.id === projectToDelete)
+    if (!projectToRestore) return
 
     try {
-      const response = await fetch(`/api/projects/${id}`, {
+      const response = await fetch(`/api/projects/${projectToDelete}`, {
         method: 'DELETE',
       })
 
@@ -101,11 +126,41 @@ export default function ProjectsPage() {
         throw new Error('Failed to delete project')
       }
 
-      toast({
-        title: 'Success!',
-        description: 'Project deleted successfully',
+      // Set up undo action
+      setUndo({
+        id: projectToDelete,
+        type: 'delete',
+        entityType: 'project',
+        data: projectToRestore,
+        undoFn: async () => {
+          // Restore the project
+          const restoreResponse = await fetch('/api/projects', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name: projectToRestore.name,
+              description: projectToRestore.description,
+              target_date: projectToRestore.target_date,
+              status: projectToRestore.status,
+            }),
+          })
+          if (!restoreResponse.ok) throw new Error('Failed to restore project')
+          fetchProjects()
+        },
       })
 
+      toast({
+        title: 'Project deleted',
+        description: 'Project deleted successfully',
+        action: (
+          <ToastAction altText="Undo" onClick={performUndo}>
+            Undo
+          </ToastAction>
+        ),
+      })
+
+      setDeleteDialogOpen(false)
+      setProjectToDelete(null)
       fetchProjects()
     } catch (error: any) {
       toast({
@@ -118,28 +173,46 @@ export default function ProjectsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="space-y-8">
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <div className="h-10 w-48 bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
+            <div className="h-6 w-64 bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
+          </div>
+          <div className="h-10 w-32 bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
+        </div>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <Card key={i} className="h-64">
+              <CardHeader>
+                <div className="h-6 w-3/4 bg-gray-200 dark:bg-gray-800 rounded animate-pulse mb-2" />
+                <div className="h-4 w-full bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
+              </CardHeader>
+              <CardContent>
+                <div className="h-4 w-1/2 bg-gray-200 dark:bg-gray-800 rounded animate-pulse mb-4" />
+                <div className="h-2 w-full bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
     )
   }
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
-        <div className="space-y-2">
-          <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-            Projects
-          </h1>
-          <p className="text-muted-foreground text-lg">
-            Organize your work into projects and track progress
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight">Projects</h1>
+          <p className="text-muted-foreground mt-1">
+            Group related tasks. Track how each one is moving.
           </p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="mr-2 h-4 w-4" />
-              New Project
+              New project
             </Button>
           </DialogTrigger>
           <DialogContent>
@@ -187,14 +260,19 @@ export default function ProjectsPage() {
 
       {projects.length === 0 ? (
         <Card>
-          <CardContent className="py-12 text-center">
-            <FolderOpen className="h-16 w-16 text-muted-foreground/50 mx-auto mb-4" />
-            <p className="text-muted-foreground text-lg mb-4">
-              No projects yet. Create your first project to get started!
+          <CardContent className="py-16 px-6 text-center">
+            <div className="p-4 rounded-full bg-primary/10 w-fit mx-auto mb-6">
+              <FolderOpen className="h-16 w-16 text-primary" />
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
+              No projects yet
+            </h3>
+            <p className="text-muted-foreground text-center max-w-md mx-auto mb-6">
+              Organize your work into projects to track progress, manage tasks, and achieve your goals more effectively.
             </p>
-            <Button onClick={() => setDialogOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Create Project
+            <Button onClick={() => setDialogOpen(true)} size="lg">
+              <Plus className="mr-2 h-5 w-5" />
+              Create Your First Project
             </Button>
           </CardContent>
         </Card>
@@ -202,7 +280,7 @@ export default function ProjectsPage() {
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {projects.map((project) => (
             <Link key={project.id} href={`/dashboard/projects/${project.id}`}>
-              <Card className="card-hover h-full flex flex-col">
+              <Card className="h-full flex flex-col transition-colors hover:border-foreground/20">
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">

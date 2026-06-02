@@ -7,9 +7,21 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Plus, FileText, Search, Calendar, Brain, Sparkles, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/hooks/use-toast'
+import { useUndo } from '@/hooks/use-undo'
+import { ToastAction } from '@/components/ui/toast'
 import { formatDateToISO } from '@/lib/utils'
 
 interface Note {
@@ -17,21 +29,19 @@ interface Note {
   date: string
   content: string
   created_at: string
-  category?: string
 }
-
-const filterOptions = ['All Notes', 'Personal', 'Work', 'Ideas', 'Projects', 'Research']
 
 export default function NotesPage() {
   const [notes, setNotes] = useState<Note[]>([])
-  const [selectedFilter, setSelectedFilter] = useState('All Notes')
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [noteToDelete, setNoteToDelete] = useState<string | null>(null)
+  const { setUndo, performUndo } = useUndo()
   const [editingNote, setEditingNote] = useState<Note | null>(null)
   const [noteContent, setNoteContent] = useState('')
   const [noteDate, setNoteDate] = useState(formatDateToISO(new Date()))
-  const [noteCategory, setNoteCategory] = useState('Personal')
   const [summarizingNoteId, setSummarizingNoteId] = useState<string | null>(null)
   const [summary, setSummary] = useState<any>(null)
   const [showSummary, setShowSummary] = useState<string | null>(null)
@@ -39,6 +49,7 @@ export default function NotesPage() {
 
   useEffect(() => {
     fetchNotes()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const fetchNotes = async () => {
@@ -72,16 +83,14 @@ export default function NotesPage() {
 
     try {
       if (editingNote) {
-        // Update existing note
         const response = await fetch(`/api/notes?id=${editingNote.id}`, {
           method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
             content: noteContent,
             date: noteDate,
-            category: noteCategory,
-        }),
-      })
+          }),
+        })
 
         if (!response.ok) throw new Error('Failed to update note')
         toast({
@@ -89,18 +98,19 @@ export default function NotesPage() {
           description: 'Note updated successfully',
         })
       } else {
-        // Create new note
         const response = await fetch('/api/notes', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             content: noteContent,
             date: noteDate,
-            category: noteCategory,
           }),
         })
 
-        if (!response.ok) throw new Error('Failed to create note')
+        if (!response.ok) {
+          const err = await response.json().catch(() => ({}))
+          throw new Error(err.error || 'Failed to create note')
+        }
         toast({
           title: 'Success',
           description: 'Note created successfully',
@@ -111,7 +121,6 @@ export default function NotesPage() {
       setEditingNote(null)
       setNoteContent('')
       setNoteDate(formatDateToISO(new Date()))
-      setNoteCategory('Personal')
       fetchNotes()
     } catch (error: any) {
       toast({
@@ -126,23 +135,58 @@ export default function NotesPage() {
     setEditingNote(note)
     setNoteContent(note.content)
     setNoteDate(note.date)
-    setNoteCategory(note.category || 'Personal')
     setDialogOpen(true)
   }
 
-  const handleDeleteNote = async (noteId: string) => {
-    if (!confirm('Are you sure you want to delete this note?')) return
+  const handleDeleteClick = (noteId: string) => {
+    setNoteToDelete(noteId)
+    setDeleteDialogOpen(true)
+  }
+
+  const handleDeleteNote = async () => {
+    if (!noteToDelete) return
+
+    // Store the note data before deletion for undo
+    const noteToRestore = notes.find(n => n.id === noteToDelete)
+    if (!noteToRestore) return
 
     try {
-      const response = await fetch(`/api/notes?id=${noteId}`, {
+      const response = await fetch(`/api/notes?id=${noteToDelete}`, {
         method: 'DELETE',
       })
 
       if (!response.ok) throw new Error('Failed to delete note')
-      toast({
-        title: 'Success',
-        description: 'Note deleted successfully',
+
+      setUndo({
+        id: noteToDelete,
+        type: 'delete',
+        entityType: 'note',
+        data: noteToRestore,
+        undoFn: async () => {
+          const restoreResponse = await fetch('/api/notes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              date: noteToRestore.date,
+              content: noteToRestore.content,
+            }),
+          })
+          if (!restoreResponse.ok) throw new Error('Failed to restore note')
+          fetchNotes()
+        },
       })
+
+      toast({
+        title: 'Note deleted',
+        description: 'Note deleted successfully',
+        action: (
+          <ToastAction altText="Undo" onClick={performUndo}>
+            Undo
+          </ToastAction>
+        ),
+      })
+      setDeleteDialogOpen(false)
+      setNoteToDelete(null)
       fetchNotes()
     } catch (error: any) {
       toast({
@@ -185,12 +229,9 @@ export default function NotesPage() {
     }
   }
 
-  const filteredNotes = notes.filter((note) => {
-    const matchesFilter =
-      selectedFilter === 'All Notes' || note.category?.toLowerCase() === selectedFilter.toLowerCase()
-    const matchesSearch = note.content.toLowerCase().includes(searchQuery.toLowerCase())
-    return matchesFilter && matchesSearch
-  })
+  const filteredNotes = notes.filter((note) =>
+    note.content.toLowerCase().includes(searchQuery.toLowerCase())
+  )
 
   return (
     <div className="space-y-4 md:space-y-6">
@@ -207,7 +248,6 @@ export default function NotesPage() {
             setEditingNote(null)
             setNoteContent('')
             setNoteDate(formatDateToISO(new Date()))
-            setNoteCategory('Personal')
           }
         }}>
           <DialogTrigger asChild>
@@ -238,21 +278,6 @@ export default function NotesPage() {
             </div>
           </div>
           <div className="space-y-2">
-                <Label htmlFor="note-category">Category</Label>
-                <select
-                  id="note-category"
-                  value={noteCategory}
-                  onChange={(e) => setNoteCategory(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                >
-                  {filterOptions.slice(1).map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-2">
                 <Label htmlFor="note-content">Content</Label>
             <Textarea
                   id="note-content"
@@ -273,30 +298,15 @@ export default function NotesPage() {
         </Dialog>
       </div>
 
-      {/* Search and Filters */}
-      <div className="space-y-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <Input
-            placeholder="Search notes..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        <div className="flex gap-2 flex-wrap">
-          {filterOptions.map((filter) => (
-            <Button
-              key={filter}
-              variant={selectedFilter === filter ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setSelectedFilter(filter)}
-            >
-              {filter}
-            </Button>
-                ))}
-            </div>
-              </div>
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+        <Input
+          placeholder="Search notes..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-10"
+        />
+      </div>
 
       {/* Notes Grid */}
       {loading ? (
@@ -314,18 +324,11 @@ export default function NotesPage() {
               onClick={() => handleEditNote(note)}
             >
               <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
-                      {new Date(note.date).toLocaleDateString()}
-                      </span>
-                  </div>
-                  {note.category && (
-                    <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary">
-                      {note.category}
-                    </span>
-                  )}
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    {new Date(note.date).toLocaleDateString()}
+                  </span>
                 </div>
               </CardHeader>
               <CardContent className="p-4 pt-0 h-full flex flex-col">
@@ -393,7 +396,7 @@ export default function NotesPage() {
                     size="sm"
                     onClick={(e) => {
                       e.stopPropagation()
-                      handleDeleteNote(note.id)
+                      handleDeleteClick(note.id)
                     }}
                     className="text-destructive hover:text-destructive"
                   >
@@ -403,7 +406,7 @@ export default function NotesPage() {
               </CardContent>
             </Card>
           ))}
-            </div>
+        </div>
       ) : (
         <Card className="p-12 text-center">
           <FileText className="h-12 w-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
@@ -419,6 +422,24 @@ export default function NotesPage() {
           )}
         </Card>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Note</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this note? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteNote} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

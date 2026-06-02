@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { PriorityBadge, calculateTaskPriority, type Priority } from '@/components/ui/priority-badge'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -67,6 +68,7 @@ export function TaskDialog({
     duration: 60,
     category: 'work',
     priority: 'medium' as Priority,
+    done: false,
     isRecurring: false,
     recurrenceType: 'daily' as 'daily' | 'weekly' | 'monthly',
     recurrenceInterval: 1,
@@ -125,6 +127,7 @@ export function TaskDialog({
         duration: task.duration_minutes || 60,
         category: task.category || 'work',
         priority: calculatedPriority,
+        done: task.done ?? false,
         isRecurring: false,
         recurrenceType: 'daily',
         recurrenceInterval: 1,
@@ -143,6 +146,7 @@ export function TaskDialog({
         duration: 60,
         category: 'work',
         priority: 'medium',
+        done: false,
         isRecurring: false,
         recurrenceType: 'daily',
         recurrenceInterval: 1,
@@ -239,6 +243,7 @@ export function TaskDialog({
       end_ts: endDate.toISOString(),
       duration_minutes: formData.duration,
       category: formData.category,
+      done: formData.done,
       recurring,
     })
 
@@ -271,6 +276,20 @@ export function TaskDialog({
               autoFocus
             />
           </div>
+          {task && (
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="done"
+                checked={formData.done}
+                onCheckedChange={(checked) =>
+                  setFormData({ ...formData, done: checked === true })
+                }
+              />
+              <Label htmlFor="done" className="font-normal cursor-pointer">
+                Mark as completed
+              </Label>
+            </div>
+          )}
           <div className="space-y-2">
             <Label htmlFor="detail">Description</Label>
             <Textarea

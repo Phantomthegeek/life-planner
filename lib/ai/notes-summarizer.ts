@@ -1,4 +1,5 @@
 import OpenAI from 'openai'
+import { arcanaCore } from './personality'
 
 // Lazy initialization to avoid build-time errors
 function getOpenAIClient(): OpenAI {
@@ -28,14 +29,16 @@ export interface WeeklyReview {
 }
 
 export async function summarizeNote(content: string): Promise<NoteSummary> {
-  const systemPrompt = `You are an AI assistant that summarizes journal entries and notes. Extract key insights, themes, and actionable items.
+  const systemPrompt = `${arcanaCore()}
 
-Respond with valid JSON:
+Right now you are summarizing one of the user's notes. Pull out what actually matters — themes, decisions, things they might want to act on later. Avoid restating the note verbatim.
+
+Respond with VALID JSON in exactly this shape:
 {
-  "summary": "Brief 2-3 sentence summary",
+  "summary": "Brief 2-3 sentence summary in your normal voice.",
   "keyPoints": ["Point 1", "Point 2"],
-  "insights": ["Insight 1", "Insight 2"],
-  "actionItems": ["Action 1", "Action 2"],
+  "insights": ["Non-obvious observation 1"],
+  "actionItems": ["Concrete next step 1"],
   "mood": "positive|neutral|negative|mixed",
   "themes": ["theme1", "theme2"]
 }`
@@ -74,16 +77,18 @@ export async function generateWeeklyReview(
   tasks: Array<{ title: string; done: boolean }>,
   habits: Array<{ name: string; streak: number }>
 ): Promise<WeeklyReview> {
-  const systemPrompt = `You are an AI life coach that provides weekly reviews. Analyze patterns, achievements, challenges, and provide actionable recommendations.
+  const systemPrompt = `${arcanaCore()}
 
-Respond with valid JSON:
+Right now you are running the user's weekly review. Be honest about what went well, what didn't, and what to change. No motivational fluff.
+
+Respond with VALID JSON in exactly this shape:
 {
-  "summary": "Weekly overview",
-  "achievements": ["Achievement 1"],
-  "challenges": ["Challenge 1"],
-  "patterns": ["Pattern observation"],
-  "recommendations": ["Recommendation 1"],
-  "nextWeekFocus": ["Focus area 1"]
+  "summary": "Weekly overview in your normal voice, addressing the user as 'you'.",
+  "achievements": ["Real wins, not participation trophies"],
+  "challenges": ["What got in the way"],
+  "patterns": ["Specific pattern observation — e.g. 'tasks scheduled after 4pm rarely get done'"],
+  "recommendations": ["One concrete change to try next week"],
+  "nextWeekFocus": ["1-2 focus areas, not a wishlist"]
 }`
 
   const notesText = notes.map((n) => `${n.date}: ${n.content}`).join('\n\n')

@@ -3,6 +3,7 @@
 import { PomodoroTimer } from '@/components/focus/pomodoro-timer'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { PriorityBadge, calculateTaskPriority } from '@/components/ui/priority-badge'
 import { ArrowLeft, Clock } from 'lucide-react'
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
@@ -38,6 +39,7 @@ export default function FocusPage() {
     }
 
     loadTasks()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const currentTask = todayTasks.find((t) => t.id === selectedTask)
@@ -94,9 +96,12 @@ export default function FocusPage() {
                     }`}
                     onClick={() => setSelectedTask(task.id)}
                   >
-                    <div className="font-medium">{task.title}</div>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="font-medium flex-1">{task.title}</div>
+                      <PriorityBadge priority={calculateTaskPriority(task)} size="sm" />
+                    </div>
                     {task.category && (
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-xs text-muted-foreground mt-1">
                         {task.category}
                       </span>
                     )}

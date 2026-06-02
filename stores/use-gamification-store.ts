@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 
 export interface Achievement {
   id: string
@@ -24,6 +25,9 @@ interface GamificationStore {
   reset: () => void
 }
 
+// Flat 1000 XP per level. Linear leveling so the math stays predictable for
+// the user — no surprise grind walls. We can move to a curve later if we
+// actually need to slow people down.
 const XP_PER_LEVEL = 1000
 
 const INITIAL_ACHIEVEMENTS: Achievement[] = [
@@ -101,89 +105,102 @@ const INITIAL_ACHIEVEMENTS: Achievement[] = [
   },
 ]
 
-export const useGamificationStore = create<GamificationStore>((set, get) => ({
+const initialState = {
   xp: 0,
   level: 1,
   totalTasksCompleted: 0,
   totalHabitsCompleted: 0,
   streak: 0,
   achievements: INITIAL_ACHIEVEMENTS,
+}
 
-  addXP: (amount) =>
-    set((state) => {
-      const newXP = state.xp + amount
-      const newLevel = Math.floor(newXP / XP_PER_LEVEL) + 1
-      return {
-        xp: newXP,
-        level: newLevel,
-      }
+export const useGamificationStore = create<GamificationStore>()(
+  persist(
+    (set, get) => ({
+      ...initialState,
+
+      addXP: (amount) =>
+        set((state) => {
+          const newXP = state.xp + amount
+          const newLevel = Math.floor(newXP / XP_PER_LEVEL) + 1
+          return {
+            xp: newXP,
+            level: newLevel,
+          }
+        }),
+
+      // Habits are worth slightly more than tasks (15 vs 10) because they
+      // require consistency, not just a one-off action. Don't tell the user;
+      // they should feel rewarded, not gamed.
+      completeTask: () => {
+        set((state) => ({
+          totalTasksCompleted: state.totalTasksCompleted + 1,
+        }))
+        get().addXP(10)
+        get().checkAchievements()
+      },
+
+      completeHabit: () => {
+        set((state) => ({
+          totalHabitsCompleted: state.totalHabitsCompleted + 1,
+        }))
+        get().addXP(15)
+        get().checkAchievements()
+      },
+
+      checkAchievements: () => {
+        const state = get()
+        set((prev) => ({
+          achievements: prev.achievements.map((achievement) => {
+            if (achievement.unlockedAt) return achievement
+
+            let progress = achievement.progress
+            let unlocked = false
+
+            switch (achievement.id) {
+              case 'first-task':
+                progress = state.totalTasksCompleted >= 1 ? 1 : 0
+                unlocked = state.totalTasksCompleted >= 1
+                break
+              case 'ten-tasks':
+                progress = Math.min(state.totalTasksCompleted, 10)
+                unlocked = state.totalTasksCompleted >= 10
+                break
+              case 'hundred-tasks':
+                progress = Math.min(state.totalTasksCompleted, 100)
+                unlocked = state.totalTasksCompleted >= 100
+                break
+              case 'seven-day-streak':
+                progress = Math.min(state.streak, 7)
+                unlocked = state.streak >= 7
+                break
+              case 'thirty-day-streak':
+                progress = Math.min(state.streak, 30)
+                unlocked = state.streak >= 30
+                break
+            }
+
+            return {
+              ...achievement,
+              progress,
+              unlockedAt: unlocked ? new Date().toISOString() : null,
+            }
+          }),
+        }))
+      },
+
+      reset: () => set(initialState),
     }),
-
-  completeTask: () => {
-    set((state) => ({
-      totalTasksCompleted: state.totalTasksCompleted + 1,
-    }))
-    get().addXP(10)
-    get().checkAchievements()
-  },
-
-  completeHabit: () => {
-    set((state) => ({
-      totalHabitsCompleted: state.totalHabitsCompleted + 1,
-    }))
-    get().addXP(15)
-    get().checkAchievements()
-  },
-
-  checkAchievements: () => {
-    const state = get()
-    set((prev) => ({
-      achievements: prev.achievements.map((achievement) => {
-        if (achievement.unlockedAt) return achievement
-
-        let progress = achievement.progress
-        let unlocked = false
-
-        switch (achievement.id) {
-          case 'first-task':
-            progress = state.totalTasksCompleted >= 1 ? 1 : 0
-            unlocked = state.totalTasksCompleted >= 1
-            break
-          case 'ten-tasks':
-            progress = Math.min(state.totalTasksCompleted, 10)
-            unlocked = state.totalTasksCompleted >= 10
-            break
-          case 'hundred-tasks':
-            progress = Math.min(state.totalTasksCompleted, 100)
-            unlocked = state.totalTasksCompleted >= 100
-            break
-          case 'seven-day-streak':
-            progress = Math.min(state.streak, 7)
-            unlocked = state.streak >= 7
-            break
-          case 'thirty-day-streak':
-            progress = Math.min(state.streak, 30)
-            unlocked = state.streak >= 30
-            break
-        }
-
-        return {
-          ...achievement,
-          progress,
-          unlockedAt: unlocked ? new Date().toISOString() : null,
-        }
+    {
+      name: 'arcana-gamification',
+      partialize: (state) => ({
+        xp: state.xp,
+        level: state.level,
+        totalTasksCompleted: state.totalTasksCompleted,
+        totalHabitsCompleted: state.totalHabitsCompleted,
+        streak: state.streak,
+        achievements: state.achievements,
       }),
-    }))
-  },
-
-  reset: () =>
-    set({
-      xp: 0,
-      level: 1,
-      totalTasksCompleted: 0,
-      totalHabitsCompleted: 0,
-      streak: 0,
-      achievements: INITIAL_ACHIEVEMENTS,
-    }),
-}))
-
+    }
+  )
+)

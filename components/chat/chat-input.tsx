@@ -1,11 +1,10 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import { Send, Paperclip, Mic, Smile } from 'lucide-react'
+import { Send, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { motion, AnimatePresence } from 'framer-motion'
 
 interface ChatInputProps {
   value: string
@@ -17,17 +16,20 @@ interface ChatInputProps {
   onSuggestionClick?: (suggestion: string) => void
 }
 
+// We auto-grow the textarea up to 120px, then let it scroll. Keeps the input
+// from eating the whole screen when someone pastes a wall of text.
+const MAX_TEXTAREA_HEIGHT = 120
+
 export function ChatInput({
   value,
   onChange,
   onSubmit,
   loading,
-  placeholder = "Ask Arcana anything...",
+  placeholder = 'Ask Arcana anything…',
   suggestions = [],
   onSuggestionClick,
 }: ChatInputProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const [focused, setFocused] = useState(false)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -40,6 +42,7 @@ export function ChatInput({
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Enter sends; Shift+Enter inserts a newline. Mirrors GitHub/Slack/Notion.
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       handleSubmit(e)
@@ -49,132 +52,57 @@ export function ChatInput({
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto'
-      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`
+      textareaRef.current.style.height = `${Math.min(
+        textareaRef.current.scrollHeight,
+        MAX_TEXTAREA_HEIGHT
+      )}px`
     }
   }, [value])
 
   return (
     <div className="space-y-3">
-      {/* Suggestions */}
-      <AnimatePresence>
-        {suggestions.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide"
-          >
-            {suggestions.map((suggestion, idx) => (
-              <motion.button
-                key={idx}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: idx * 0.05 }}
-                onClick={() => onSuggestionClick?.(suggestion)}
-                className="px-4 py-2 text-sm bg-muted hover:bg-muted/80 rounded-full border border-border/50 transition-all duration-200 hover:scale-105 whitespace-nowrap"
-              >
-                💡 {suggestion}
-              </motion.button>
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {suggestions.length > 0 && (
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+          {suggestions.map((suggestion, idx) => (
+            <button
+              key={idx}
+              onClick={() => onSuggestionClick?.(suggestion)}
+              className="px-3 py-1.5 text-xs bg-muted hover:bg-muted/70 rounded-full border border-border transition-colors whitespace-nowrap"
+            >
+              {suggestion}
+            </button>
+          ))}
+        </div>
+      )}
 
-      {/* Input Area */}
-      <motion.div
-        animate={{
-          boxShadow: focused
-            ? '0 0 0 3px hsl(var(--ring) / 0.3)'
-            : '0 0 0 0px transparent',
-        }}
+      <form
+        onSubmit={handleSubmit}
         className={cn(
-          'relative rounded-2xl border-2 bg-card transition-all duration-300',
-          focused
-            ? 'border-primary/50 shadow-lg shadow-primary/10'
-            : 'border-border/50 hover:border-border'
+          'flex items-end gap-2 rounded-lg border bg-card p-2',
+          'focus-within:border-foreground/30 transition-colors'
         )}
       >
-        <form onSubmit={handleSubmit} className="flex items-end gap-2 p-2 md:p-3">
-          <div className="flex-1 relative">
-            <Textarea
-              ref={textareaRef}
-              value={value}
-              onChange={(e) => onChange(e.target.value)}
-              onKeyDown={handleKeyDown}
-              onFocus={() => setFocused(true)}
-              onBlur={() => setFocused(false)}
-              placeholder={placeholder}
-              disabled={loading}
-              className={cn(
-                'min-h-[40px] md:min-h-[44px] max-h-[120px] resize-none border-0 focus-visible:ring-0',
-                'bg-transparent pr-8 md:pr-10 text-sm md:text-base'
-              )}
-              rows={1}
-            />
-            
-            {/* Character count / Actions */}
-            <div className="absolute bottom-1.5 md:bottom-2 right-1.5 md:right-2 flex items-center gap-1 md:gap-2">
-              {value.length > 0 && (
-                <span className="text-xs text-muted-foreground hidden sm:inline">
-                  {value.length}
-                </span>
-              )}
-              <div className="flex gap-1 hidden sm:flex">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 opacity-50 hover:opacity-100"
-                  disabled
-                  title="Coming soon"
-                >
-                  <Smile className="h-4 w-4" />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 opacity-50 hover:opacity-100"
-                  disabled
-                  title="Coming soon"
-                >
-                  <Paperclip className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </div>
+        <Textarea
+          ref={textareaRef}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder={placeholder}
+          disabled={loading}
+          className="min-h-[40px] max-h-[120px] resize-none border-0 focus-visible:ring-0 bg-transparent text-sm shadow-none px-2"
+          rows={1}
+        />
 
-          <Button
-            type="submit"
-            disabled={loading || !value.trim()}
-            size="icon"
-            className={cn(
-              'h-10 w-10 md:h-11 md:w-11 rounded-xl shadow-lg transition-all duration-300 flex-shrink-0',
-              'bg-gradient-to-br from-primary to-secondary',
-              'hover:scale-110 hover:shadow-xl',
-              (!value.trim() || loading) && 'opacity-50 cursor-not-allowed'
-            )}
-          >
-            {loading ? (
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-              >
-                <Send className="h-5 w-5" />
-              </motion.div>
-            ) : (
-              <Send className="h-5 w-5" />
-            )}
-          </Button>
-        </form>
-      </motion.div>
-
-      {/* Helper text */}
-      <p className="text-xs text-muted-foreground text-center hidden sm:block">
-        Press <kbd className="px-1.5 py-0.5 bg-muted rounded text-xs">Enter</kbd> to send,
-        <kbd className="px-1.5 py-0.5 bg-muted rounded text-xs ml-1">Shift + Enter</kbd> for new line
-      </p>
+        <Button
+          type="submit"
+          disabled={loading || !value.trim()}
+          size="icon"
+          className="h-9 w-9 flex-shrink-0"
+          aria-label="Send"
+        >
+          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+        </Button>
+      </form>
     </div>
   )
 }
-

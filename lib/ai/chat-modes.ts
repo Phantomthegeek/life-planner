@@ -1,7 +1,7 @@
-/**
- * Smart Mode Detection for Chat with Einstein
- * Detects user intent and switches chat modes accordingly
- */
+// Lightweight keyword-based intent detection for the chat. It's intentionally
+// dumb — a tiny scoring pass over hand-curated triggers — because the cost
+// of being wrong is tiny (we just nudge the system prompt) and the cost of
+// shipping a real classifier is not.
 
 export type ChatMode = 'learning' | 'task' | 'chat' | 'mixed'
 
@@ -33,67 +33,49 @@ const chatTriggers = [
 
 export function detectChatMode(userMessage: string): ModeDetectionResult {
   const lowerMessage = userMessage.toLowerCase()
-  const words = lowerMessage.split(/\s+/)
 
-  // Count matches for each mode
-  let learningScore = 0
-  let taskScore = 0
-  let chatScore = 0
-
-  const matchedKeywords: string[] = []
-
-  // Check learning triggers
-  learningTriggers.forEach((trigger) => {
-    if (lowerMessage.includes(trigger)) {
-      learningScore += trigger.split(' ').length
-      matchedKeywords.push(trigger)
+  // Longer triggers count more — "i don't understand" is a stronger signal
+  // than just "learn", which appears in tons of unrelated sentences.
+  const scoreTriggers = (triggers: string[]): { score: number; hits: string[] } => {
+    const hits: string[] = []
+    let score = 0
+    for (const trigger of triggers) {
+      if (lowerMessage.includes(trigger)) {
+        score += trigger.split(' ').length
+        hits.push(trigger)
+      }
     }
-  })
-
-  // Check task triggers
-  taskTriggers.forEach((trigger) => {
-    if (lowerMessage.includes(trigger)) {
-      taskScore += trigger.split(' ').length
-      matchedKeywords.push(trigger)
-    }
-  })
-
-  // Check chat triggers
-  chatTriggers.forEach((trigger) => {
-    if (lowerMessage.includes(trigger)) {
-      chatScore += trigger.split(' ').length
-      matchedKeywords.push(trigger)
-    }
-  })
-
-  // Determine mode
-  let mode: ChatMode = 'chat' // Default
-  let confidence = 0.5
-
-  if (learningScore > taskScore && learningScore > chatScore) {
-    mode = 'learning'
-    confidence = Math.min(learningScore / 5, 0.95)
-  } else if (taskScore > learningScore && taskScore > chatScore) {
-    mode = 'task'
-    confidence = Math.min(taskScore / 5, 0.95)
-  } else if (chatScore > 0) {
-    mode = 'chat'
-    confidence = Math.min(chatScore / 3, 0.95)
+    return { score, hits }
   }
 
-  // Mixed mode if multiple modes detected
-  const modesDetected = [
-    learningScore > 0,
-    taskScore > 0,
-    chatScore > 0,
-  ].filter(Boolean).length
+  const learning = scoreTriggers(learningTriggers)
+  const task = scoreTriggers(taskTriggers)
+  const chat = scoreTriggers(chatTriggers)
 
-  if (modesDetected > 1) {
+  let mode: ChatMode = 'chat'
+  let confidence = 0.5
+
+  if (learning.score > task.score && learning.score > chat.score) {
+    mode = 'learning'
+    confidence = Math.min(learning.score / 5, 0.95)
+  } else if (task.score > learning.score && task.score > chat.score) {
+    mode = 'task'
+    confidence = Math.min(task.score / 5, 0.95)
+  } else if (chat.score > 0) {
+    mode = 'chat'
+    confidence = Math.min(chat.score / 3, 0.95)
+  }
+
+  // If more than one bucket lit up, flag it as mixed so the model knows to
+  // tackle the most important part first instead of trying to do everything.
+  const bucketsHit = [learning.score, task.score, chat.score].filter((s) => s > 0).length
+  if (bucketsHit > 1) {
     mode = 'mixed'
     confidence = 0.7
   }
 
-  // Context detection
+  // Best-effort context tag for the system prompt. Order matters: cert beats
+  // generic "task" because certs always mention modules.
   let context = ''
   if (lowerMessage.includes('module') || lowerMessage.includes('certification')) {
     context = 'certification'
@@ -108,51 +90,41 @@ export function detectChatMode(userMessage: string): ModeDetectionResult {
   return {
     mode,
     confidence: Math.round(confidence * 100) / 100,
-    keywords: matchedKeywords,
+    keywords: [...learning.hits, ...task.hits, ...chat.hits],
     context,
   }
 }
 
+import { arcanaCore } from './personality'
+
 export function getModePrompt(mode: ChatMode, context?: string): string {
-  const basePersonality = `You are Arcana, an intelligent AI assistant and productivity companion. You're helpful, insightful, and make productivity feel magical. You combine wisdom with practical guidance, helping users achieve their goals through intelligent suggestions and knowledge management.`
-
   const modePrompts = {
-    learning: `You are in LEARNING MODE. Act as a patient teacher and mentor. 
-- Provide clear, structured explanations
-- Break complex topics into digestible parts
-- Use examples and analogies
-- Create quizzes or practice questions when helpful
-- Relate concepts to the user's certifications or modules when relevant
-- Be encouraging and supportive
-- If asked about a specific module, reference it by name`,
+    learning: `Right now you are TEACHING.
+- Explain things clearly, building from what the user likely already knows.
+- Use concrete examples and analogies before formal definitions.
+- Offer to quiz the user at the end if the topic warrants it.
+- If the question is about one of their certification modules, reference it by name.`,
 
-    task: `You are in TASK MODE. Act as a productivity assistant.
-- Help create tasks and schedules
-- Break down goals into actionable steps
-- Suggest time estimates
-- Help organize and prioritize
-- Generate task templates
-- Be practical and action-oriented`,
+    task: `Right now you are PLANNING.
+- Translate goals into the smallest reasonable next action.
+- Give realistic time estimates and call out anything that looks too ambitious.
+- If something belongs on the calendar, suggest a specific date/time.
+- Don't generate fluff or motivational quotes.`,
 
-    chat: `You are in CHAT MODE. Be conversational and engaging.
-- Have friendly, natural conversations
-- Share interesting facts or insights
-- Be supportive and motivational
-- Keep it light and engaging
-- Feel free to be a bit playful
-- Remember you're Einstein - be smart but approachable`,
+    chat: `Right now you are in conversation.
+- Be warm and human. Short replies are fine.
+- Ask one good follow-up question when it would actually help.
+- You can be a little playful, but never sycophantic.`,
 
-    mixed: `You are in MIXED MODE. Balance multiple needs.
-- Address both learning and task aspects
-- Be flexible and adaptable
-- Provide comprehensive help
-- Switch between modes seamlessly as needed`,
+    mixed: `The user is mixing topics.
+- Answer the most important part first, then offer to dig into the rest.
+- Don't try to cover everything in one reply.`,
   }
 
-  let prompt = `${basePersonality}\n\n${modePrompts[mode]}`
+  let prompt = `${arcanaCore()}\n\n${modePrompts[mode]}`
 
   if (context) {
-    prompt += `\n\nContext: The user is asking about ${context}. Use relevant information from their app.`
+    prompt += `\n\nContext from their app: ${context}.`
   }
 
   return prompt

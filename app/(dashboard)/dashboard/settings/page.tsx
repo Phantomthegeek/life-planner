@@ -126,6 +126,7 @@ export default function SettingsPage() {
         console.error('Failed to parse stored settings', e)
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const handleThemeChange = (themeId: string) => {

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts'
-import { Calendar, CheckCircle2, Clock, Target, TrendingUp, Loader2, Brain, Sparkles } from 'lucide-react'
+import { Calendar, CheckCircle2, Clock, Target, TrendingUp, Loader2, Brain } from 'lucide-react'
 import { format, subDays, startOfWeek, endOfWeek, eachDayOfInterval } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
@@ -41,6 +41,7 @@ export default function StatisticsPage() {
 
   useEffect(() => {
     fetchStatistics()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dateRange])
 
   const fetchStatistics = async () => {
@@ -143,10 +144,7 @@ export default function StatisticsPage() {
         </div>
         <div className="flex gap-2">
           <Button variant="outline" asChild>
-            <Link href="/dashboard/coach/weekly-review">
-              <Sparkles className="mr-2 h-4 w-4" />
-              Weekly Review
-            </Link>
+            <Link href="/dashboard/coach/weekly-review">Weekly review</Link>
           </Button>
         </div>
       </div>

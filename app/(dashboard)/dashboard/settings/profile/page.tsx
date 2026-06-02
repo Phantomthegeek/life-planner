@@ -37,6 +37,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     fetchProfile()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const fetchProfile = async () => {
@@ -212,9 +213,9 @@ export default function ProfilePage() {
           <CardContent className="space-y-6">
             {/* Avatar */}
             <div className="flex items-center gap-6">
-              <Avatar className="h-24 w-24 border-4 border-primary/20">
+              <Avatar className="h-20 w-20 border border-border">
                 <AvatarImage src={profile.avatar_url || undefined} />
-                <AvatarFallback className="text-2xl font-bold bg-gradient-to-br from-primary to-secondary text-white">
+                <AvatarFallback className="text-xl font-medium bg-muted">
                   {getInitials(profile.full_name, profile.email)}
                 </AvatarFallback>
               </Avatar>

@@ -15,6 +15,7 @@ import { formatDate } from '@/lib/utils'
 import { useTaskStore } from '@/stores/use-task-store'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { calculateTaskPriority } from '@/components/ui/priority-badge'
+import { rewardTaskCompletion } from '@/lib/gamification-actions'
 
 interface PlannerViewProps {
   initialTasks: Task[]
@@ -174,6 +175,11 @@ export function PlannerView({ initialTasks }: PlannerViewProps) {
       if (!response.ok) throw new Error(`Failed to ${isUpdate ? 'update' : 'create'} task`)
 
       const task = await response.json()
+
+      const wasDone = isUpdate && editingTask ? editingTask.done : false
+      if (task.done && !wasDone) {
+        rewardTaskCompletion()
+      }
       
       if (isUpdate) {
         updateTask(task.id, task)

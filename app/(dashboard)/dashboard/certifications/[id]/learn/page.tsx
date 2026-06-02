@@ -1,29 +1,75 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
-import { 
-  BookOpen, 
-  ArrowLeft, 
-  Brain, 
-  Sparkles,
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  BookOpen,
+  ArrowLeft,
+  Brain,
   PlayCircle,
   CheckCircle2,
   Circle,
   Clock,
   Zap,
   Menu,
-  X
+  X,
+  Trophy,
+  Loader2,
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { LessonViewer } from '@/components/learning/lesson-viewer'
+import { QuizInterface } from '@/components/learning/quiz-interface'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
+
+const completedKey = (certId: string) => `arcana-cert-completed-${certId}`
+
+function loadCompleted(certId: string): Set<string> {
+  if (typeof window === 'undefined') return new Set()
+  try {
+    const raw = window.localStorage.getItem(completedKey(certId))
+    if (!raw) return new Set()
+    const arr = JSON.parse(raw)
+    return new Set(Array.isArray(arr) ? arr : [])
+  } catch {
+    return new Set()
+  }
+}
+
+function saveCompleted(certId: string, ids: Set<string>) {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.setItem(
+      completedKey(certId),
+      JSON.stringify(Array.from(ids))
+    )
+  } catch {
+    /* ignore */
+  }
+}
+
+interface QuizQuestion {
+  id: string
+  question: string
+  question_type: 'multiple_choice' | 'true_false' | 'fill_blank'
+  options?: string[]
+  correct_answer: string
+  explanation: string
+  difficulty_level: number
+}
 
 interface Module {
   id: string
@@ -60,16 +106,112 @@ export default function LearnPage() {
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [generating, setGenerating] = useState(false)
+  const [completedLessons, setCompletedLessons] = useState<Set<string>>(new Set())
+  const [certificationName, setCertificationName] = useState<string>('')
+  const [quizOpen, setQuizOpen] = useState(false)
+  const [quizLoading, setQuizLoading] = useState(false)
+  const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([])
+
+  useEffect(() => {
+    setCompletedLessons(loadCompleted(certId))
+  }, [certId])
+
+  const totalLessons = lessons.length
+  const completedCount = useMemo(
+    () => lessons.filter((l) => completedLessons.has(l.id)).length,
+    [lessons, completedLessons]
+  )
+  const certProgressPct = useMemo(
+    () => (totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0),
+    [completedCount, totalLessons]
+  )
+
+  const persistCertProgress = async (pct: number) => {
+    try {
+      await fetch('/api/certifications/progress', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cert_id: certId, progress: pct }),
+      })
+    } catch (err) {
+      console.error('Failed to persist cert progress:', err)
+    }
+  }
+
+  const handleLessonComplete = async (lessonId: string) => {
+    if (completedLessons.has(lessonId)) return
+    const next = new Set(completedLessons)
+    next.add(lessonId)
+    setCompletedLessons(next)
+    saveCompleted(certId, next)
+
+    const newCompletedCount = lessons.filter((l) => next.has(l.id)).length
+    const newPct = totalLessons > 0
+      ? Math.round((newCompletedCount / totalLessons) * 100)
+      : 0
+
+    await persistCertProgress(newPct)
+
+    toast({
+      title: 'Lesson completed',
+      description:
+        newPct === 100
+          ? 'You finished every lesson. Time to schedule the exam.'
+          : `Cert progress: ${newPct}%`,
+    })
+  }
+
+  const openQuickQuiz = async () => {
+    if (!selectedLesson) return
+    setQuizOpen(true)
+    setQuizLoading(true)
+    setQuizQuestions([])
+    try {
+      const res = await fetch('/api/ai/lesson-quiz', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lesson_title: selectedLesson.title,
+          lesson_description: selectedLesson.description,
+          certification_name: certificationName,
+          difficulty: selectedLesson.difficulty_level || 2,
+          num_questions: 5,
+        }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || 'Failed to generate quiz')
+      }
+      const data = await res.json()
+      setQuizQuestions(data.questions || [])
+    } catch (err: any) {
+      toast({
+        title: 'Quiz failed',
+        description: err.message || 'Could not generate a quiz right now',
+        variant: 'destructive',
+      })
+      setQuizOpen(false)
+    } finally {
+      setQuizLoading(false)
+    }
+  }
 
   useEffect(() => {
     fetchModulesAndLessons()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [certId])
 
   const fetchModulesAndLessons = async () => {
     try {
       setLoading(true)
 
-      // Fetch modules
+      const certsRes = await fetch('/api/certifications')
+      if (certsRes.ok) {
+        const certs = await certsRes.json()
+        const cert = (certs || []).find((c: any) => c.id === certId)
+        if (cert?.name) setCertificationName(cert.name)
+      }
+
       const modulesRes = await fetch(`/api/certifications/${certId}/modules`)
       if (modulesRes.ok) {
         const modulesData = await modulesRes.json()
@@ -79,7 +221,6 @@ export default function LearnPage() {
         }
       }
 
-      // Fetch lessons
       const lessonsRes = await fetch(`/api/certifications/${certId}/lessons`)
       if (lessonsRes.ok) {
         const lessonsData = await lessonsRes.json()
@@ -155,10 +296,8 @@ export default function LearnPage() {
               <CardHeader className="border-b pb-4">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
-                    <div className="p-2 rounded-lg bg-gradient-to-br from-primary/20 to-secondary/20">
-                      <BookOpen className="h-5 w-5 text-primary" />
-                    </div>
-                    <CardTitle className="text-lg">Table of Contents</CardTitle>
+                    <BookOpen className="h-4 w-4 text-muted-foreground" />
+                    <CardTitle className="text-base">Modules</CardTitle>
                   </div>
                   <Button
                     variant="ghost"
@@ -244,14 +383,11 @@ export default function LearnPage() {
                                   >
                                     {generating ? (
                                       <>
-                                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current mr-2" />
-                                        Generating...
+                                        <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                                        Generating…
                                       </>
                                     ) : (
-                                      <>
-                                        <Sparkles className="mr-2 h-3 w-3" />
-                                        Generate Lessons
-                                      </>
+                                      'Generate lessons'
                                     )}
                                   </Button>
                                 )}
@@ -259,41 +395,50 @@ export default function LearnPage() {
                                 {lessons
                                   .filter(l => l.module_id === module.id)
                                   .sort((a, b) => a.order_idx - b.order_idx)
-                                  .map((lesson, idx) => (
-                                    <motion.div
-                                      key={lesson.id}
-                                      initial={{ opacity: 0, x: -10 }}
-                                      animate={{ opacity: 1, x: 0 }}
-                                      transition={{ delay: idx * 0.05 }}
-                                      className={cn(
-                                        'flex items-center gap-2 p-2 rounded-md cursor-pointer transition-all',
-                                        selectedLesson?.id === lesson.id
-                                          ? 'bg-primary/10 border border-primary/20'
-                                          : 'hover:bg-muted'
-                                      )}
-                                      onClick={(e) => {
-                                        e.stopPropagation()
-                                        setSelectedLesson(lesson)
-                                      }}
-                                    >
-                                      {selectedLesson?.id === lesson.id ? (
-                                        <PlayCircle className="h-4 w-4 text-primary flex-shrink-0" />
-                                      ) : (
-                                        <Circle className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                                      )}
-                                      <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-medium truncate">
-                                          {lesson.title}
-                                        </p>
-                                        <div className="flex items-center gap-2 mt-1">
-                                          <Clock className="h-3 w-3 text-muted-foreground" />
-                                          <span className="text-xs text-muted-foreground">
-                                            {lesson.estimated_minutes} min
-                                          </span>
+                                  .map((lesson, idx) => {
+                                    const isDone = completedLessons.has(lesson.id)
+                                    const isActive = selectedLesson?.id === lesson.id
+                                    return (
+                                      <motion.div
+                                        key={lesson.id}
+                                        initial={{ opacity: 0, x: -10 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ delay: idx * 0.05 }}
+                                        className={cn(
+                                          'flex items-center gap-2 p-2 rounded-md cursor-pointer transition-all',
+                                          isActive
+                                            ? 'bg-primary/10 border border-primary/20'
+                                            : 'hover:bg-muted'
+                                        )}
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          setSelectedLesson(lesson)
+                                        }}
+                                      >
+                                        {isDone ? (
+                                          <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                                        ) : isActive ? (
+                                          <PlayCircle className="h-4 w-4 text-primary flex-shrink-0" />
+                                        ) : (
+                                          <Circle className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                        )}
+                                        <div className="flex-1 min-w-0">
+                                          <p className={cn(
+                                            'text-sm font-medium truncate',
+                                            isDone && 'text-muted-foreground line-through'
+                                          )}>
+                                            {lesson.title}
+                                          </p>
+                                          <div className="flex items-center gap-2 mt-1">
+                                            <Clock className="h-3 w-3 text-muted-foreground" />
+                                            <span className="text-xs text-muted-foreground">
+                                              {lesson.estimated_minutes} min
+                                            </span>
+                                          </div>
                                         </div>
-                                      </div>
-                                    </motion.div>
-                                  ))}
+                                      </motion.div>
+                                    )
+                                  })}
                               </CardContent>
                             </motion.div>
                           )}
@@ -327,16 +472,47 @@ export default function LearnPage() {
                 <h2 className="text-xl font-semibold">{selectedModule.title}</h2>
                 <p className="text-sm text-muted-foreground">
                   {moduleLessons.length} lesson{moduleLessons.length !== 1 ? 's' : ''}
+                  {totalLessons > 0 && (
+                    <>
+                      {' · '}
+                      <span className="text-foreground font-medium">
+                        {completedCount}/{totalLessons}
+                      </span>
+                      {' done overall'}
+                    </>
+                  )}
                 </p>
               </div>
             )}
           </div>
 
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm">
-              <Brain className="mr-2 h-4 w-4" />
-              AI Tutor
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={openQuickQuiz}
+              disabled={!selectedLesson}
+              title={selectedLesson ? 'Generate a 5-question quiz on this lesson' : 'Select a lesson first'}
+            >
+              <Trophy className="mr-2 h-4 w-4" />
+              Quick Quiz
             </Button>
+            <Link
+              href={
+                selectedLesson
+                  ? `/dashboard/chat?cert_id=${certId}&prompt=${encodeURIComponent(
+                      `Help me understand the "${selectedLesson.title}" lesson${
+                        certificationName ? ` from ${certificationName}` : ''
+                      }. What should I focus on?`
+                    )}`
+                  : '/dashboard/chat'
+              }
+            >
+              <Button variant="outline" size="sm">
+                <Brain className="mr-2 h-4 w-4" />
+                Ask Arcana
+              </Button>
+            </Link>
           </div>
         </div>
 
@@ -355,45 +531,77 @@ export default function LearnPage() {
                   practical: selectedLesson.cert_lesson_content?.find(c => c.content_type === 'practical')?.content_data?.practical,
                   summary: selectedLesson.cert_lesson_content?.find(c => c.content_type === 'summary')?.content_data?.summary,
                 }}
+                isCompleted={completedLessons.has(selectedLesson.id)}
+                onComplete={() => handleLessonComplete(selectedLesson.id)}
               />
             ) : (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="text-center py-20"
-              >
-                <div className="p-6 rounded-full bg-gradient-to-br from-primary/20 to-secondary/20 w-24 h-24 mx-auto mb-6 flex items-center justify-center">
-                  <BookOpen className="h-12 w-12 text-primary" />
-                </div>
-                <h3 className="text-2xl font-semibold mb-2">Select a Lesson</h3>
-                <p className="text-muted-foreground mb-6">
-                  Choose a lesson from the sidebar to start learning
+              <div className="text-center py-20 max-w-md mx-auto">
+                <BookOpen className="h-8 w-8 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-1">Pick a lesson</h3>
+                <p className="text-sm text-muted-foreground mb-6">
+                  Choose one from the sidebar, or generate lessons if this module is empty.
                 </p>
                 {selectedModule && moduleLessons.length === 0 && (
                   <Button
                     onClick={() => handleGenerateLessons(selectedModule.id)}
                     disabled={generating}
-                    size="lg"
-                    className="bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90"
                   >
                     {generating ? (
                       <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2" />
-                        Generating Lessons...
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Generating…
                       </>
                     ) : (
-                      <>
-                        <Sparkles className="mr-2 h-4 w-4" />
-                        Generate Lessons with AI
-                      </>
+                      'Generate lessons'
                     )}
                   </Button>
                 )}
-              </motion.div>
+              </div>
             )}
           </div>
         </ScrollArea>
       </div>
+
+      <Dialog
+        open={quizOpen}
+        onOpenChange={(open) => {
+          setQuizOpen(open)
+          if (!open) setQuizQuestions([])
+        }}
+      >
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              Quick Quiz {selectedLesson ? `· ${selectedLesson.title}` : ''}
+            </DialogTitle>
+            <DialogDescription>
+              Five AI-generated questions to test what you just read.
+            </DialogDescription>
+          </DialogHeader>
+          {quizLoading ? (
+            <div className="flex flex-col items-center justify-center py-16 gap-3">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-sm text-muted-foreground">
+                Arcana is writing your questions…
+              </p>
+            </div>
+          ) : quizQuestions.length > 0 ? (
+            <QuizInterface
+              questions={quizQuestions}
+              quizTitle={selectedLesson?.title || 'Lesson Quiz'}
+              onComplete={(score) => {
+                if (score >= 80 && selectedLesson) {
+                  handleLessonComplete(selectedLesson.id)
+                }
+              }}
+            />
+          ) : (
+            <p className="text-sm text-muted-foreground py-8 text-center">
+              No questions generated. Try again.
+            </p>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
