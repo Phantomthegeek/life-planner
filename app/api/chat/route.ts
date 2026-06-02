@@ -60,14 +60,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: historyError.message }, { status: 400 })
     }
 
-    // Convert to ChatMessage format
+    // Convert to ChatMessage format. The `metadata` column is jsonb so we narrow
+    // it to the ChatMessage["metadata"] shape used by the rest of the chat flow.
     const conversationHistory: ChatMessage[] = (historyMessages || []).map((msg) => ({
       id: msg.id,
       role: msg.role as 'user' | 'assistant' | 'system',
       content: msg.content,
       mode: msg.mode as any,
       timestamp: msg.created_at,
-      metadata: msg.metadata || {},
+      metadata: (msg.metadata ?? undefined) as ChatMessage['metadata'],
     }))
 
     // Save user message

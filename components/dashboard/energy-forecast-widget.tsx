@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Battery, BatteryLow, BatteryMedium, BatteryHigh, Loader2 } from 'lucide-react'
+import { Battery, BatteryLow, BatteryMedium, BatteryFull, Loader2 } from 'lucide-react'
 import { format } from 'date-fns'
 
 export function EnergyForecastWidget() {
@@ -35,14 +35,19 @@ export function EnergyForecastWidget() {
 
   if (!forecast) return null
 
-  const { predicted_energy, peak_hours, suggested_plan_mode, confidence } = forecast
+  const { predicted_energy, peak_hours, suggested_plan_mode, confidence } = forecast as {
+    predicted_energy: 'high' | 'medium' | 'low'
+    peak_hours: string[]
+    suggested_plan_mode: 'intense' | 'normal' | 'light'
+    confidence: number
+  }
 
-  const EnergyIcon = 
-    predicted_energy === 'high' ? BatteryHigh :
+  const EnergyIcon =
+    predicted_energy === 'high' ? BatteryFull :
     predicted_energy === 'medium' ? BatteryMedium :
     BatteryLow
 
-  const energyColors = {
+  const energyColors: Record<'high' | 'medium' | 'low', string> = {
     high: 'text-green-500',
     medium: 'text-yellow-500',
     low: 'text-red-500',

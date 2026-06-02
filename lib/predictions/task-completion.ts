@@ -51,10 +51,11 @@ export async function predictTaskCompletion(
   const scheduledTime = task.start_ts ? new Date(task.start_ts).getHours() : null
   const bestTimePattern = patterns?.find((p) => p.pattern_type === 'best_time')
   if (bestTimePattern && scheduledTime !== null) {
-    const bestHours = bestTimePattern.pattern_data?.best_hours || []
-    const isInBestTime = bestHours.some((h: any) => h.hour === scheduledTime)
+    const data = (bestTimePattern.pattern_data ?? {}) as { best_hours?: Array<{ hour: number }> }
+    const bestHours = data.best_hours || []
+    const isInBestTime = bestHours.some((h) => h.hour === scheduledTime)
     if (!isInBestTime) {
-      riskFactors.push(`Scheduled outside your optimal hours (${bestHours.map((h: any) => `${h.hour}:00`).join(', ')})`)
+      riskFactors.push(`Scheduled outside your optimal hours (${bestHours.map((h) => `${h.hour}:00`).join(', ')})`)
       completionLikelihood -= 0.15
     } else {
       completionLikelihood += 0.1
@@ -160,7 +161,8 @@ export async function predictTaskCompletion(
   // Suggest optimal time if risk is high
   let suggestedTime: string | undefined
   if (riskLevel === 'high' && bestTimePattern) {
-    const bestHours = bestTimePattern.pattern_data?.best_hours || []
+    const data = (bestTimePattern.pattern_data ?? {}) as { best_hours?: Array<{ hour: number }> }
+    const bestHours = data.best_hours || []
     if (bestHours.length > 0) {
       const optimalHour = bestHours[0].hour
       suggestedTime = `${optimalHour}:00`

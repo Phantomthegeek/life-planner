@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import type { Json } from '@/lib/supabase/database.types'
 import { createClient } from '@/lib/supabase/server'
 import { generateDailyPlan } from '@/lib/ai/coach'
 
@@ -91,7 +92,7 @@ export async function POST(request: NextRequest) {
         date,
         mode,
       },
-      response: plan,
+      response: plan as unknown as Json,
     })
 
     return NextResponse.json({

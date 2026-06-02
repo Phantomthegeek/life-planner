@@ -7,11 +7,14 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Task } from '@/lib/types'
-import { ChevronLeft, ChevronRight, Plus, Clock, RefreshCw } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, Clock, RefreshCw, ArrowUpDown, Archive, ArchiveRestore } from 'lucide-react'
 import { TaskDialog } from './task-dialog'
+import { TaskTooltip } from './task-tooltip'
 import { useToast } from '@/hooks/use-toast'
 import { formatDate } from '@/lib/utils'
 import { useTaskStore } from '@/stores/use-task-store'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { calculateTaskPriority } from '@/components/ui/priority-badge'
 
 interface PlannerViewProps {
   initialTasks: Task[]
@@ -24,6 +27,8 @@ export function PlannerView({ initialTasks }: PlannerViewProps) {
   const [selectedDate, setSelectedDate] = useState(formatDate(currentDate))
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
+  const [sortBy, setSortBy] = useState<'date' | 'priority' | 'category' | 'title'>('date')
+  const [showArchived, setShowArchived] = useState(false)
   const { toast } = useToast()
   const { tasks, setTasks, addTask, updateTask, deleteTask } = useTaskStore()
 
@@ -83,16 +88,66 @@ export function PlannerView({ initialTasks }: PlannerViewProps) {
     return Array.from({ length: 7 }, (_, i) => addDays(start, i))
   }, [currentDate])
 
+  // Filter and sort tasks
+  const filteredAndSortedTasks = useMemo(() => {
+    // Filter out archived tasks unless showArchived is true
+    let filtered = tasks.filter((task) => {
+      if (showArchived) return true
+      try {
+        if (task.detail && task.detail.startsWith('{')) {
+          const detailObj = JSON.parse(task.detail)
+          return !detailObj.archived
+        }
+      } catch {
+        // If parsing fails, include the task
+      }
+      return true
+    })
+    
+    // Sort tasks based on selected sort option
+    const sorted = [...filtered]
+    
+    switch (sortBy) {
+      case 'priority':
+        return sorted.sort((a, b) => {
+          const priorityA = calculateTaskPriority(a)
+          const priorityB = calculateTaskPriority(b)
+          const priorityOrder = { urgent: 4, high: 3, medium: 2, low: 1 }
+          return (priorityOrder[priorityB] || 0) - (priorityOrder[priorityA] || 0)
+        })
+      case 'category':
+        return sorted.sort((a, b) => {
+          const catA = a.category || 'zzz'
+          const catB = b.category || 'zzz'
+          return catA.localeCompare(catB)
+        })
+      case 'title':
+        return sorted.sort((a, b) => a.title.localeCompare(b.title))
+      case 'date':
+      default:
+        return sorted.sort((a, b) => {
+          if (a.date !== b.date) {
+            return a.date.localeCompare(b.date)
+          }
+          // If same date, sort by start time
+          if (a.start_ts && b.start_ts) {
+            return new Date(a.start_ts).getTime() - new Date(b.start_ts).getTime()
+          }
+          return 0
+        })
+    }
+  }, [tasks, sortBy, showArchived])
+
   const tasksByDate = useMemo(() => {
     const grouped: Record<string, Task[]> = {}
-    tasks.forEach((task) => {
+    filteredAndSortedTasks.forEach((task) => {
       if (!grouped[task.date]) {
         grouped[task.date] = []
       }
       grouped[task.date].push(task)
     })
     return grouped
-  }, [tasks])
+  }, [filteredAndSortedTasks])
 
   const getTasksForSlot = (date: Date, hour: number) => {
     const dateStr = formatDate(date)
@@ -204,7 +259,42 @@ export function PlannerView({ initialTasks }: PlannerViewProps) {
                 Today
               </Button>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="sort" className="text-xs text-muted-foreground hidden sm:inline">
+                  Sort:
+                </Label>
+                <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
+                  <SelectTrigger id="sort" className="h-9 w-[140px] text-xs">
+                    <ArrowUpDown className="h-3 w-3 mr-2" />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="date">By Date</SelectItem>
+                    <SelectItem value="priority">By Priority</SelectItem>
+                    <SelectItem value="category">By Category</SelectItem>
+                    <SelectItem value="title">By Title</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button
+                variant={showArchived ? "default" : "outline"}
+                size="sm"
+                onClick={() => setShowArchived(!showArchived)}
+                className="h-9 text-xs md:text-sm"
+              >
+                {showArchived ? (
+                  <>
+                    <ArchiveRestore className="h-4 w-4 md:mr-2" />
+                    <span className="hidden sm:inline">Hide Archived</span>
+                  </>
+                ) : (
+                  <>
+                    <Archive className="h-4 w-4 md:mr-2" />
+                    <span className="hidden sm:inline">Show Archived</span>
+                  </>
+                )}
+              </Button>
               <Button
                 variant="outline"
                 size="sm"
@@ -270,37 +360,37 @@ export function PlannerView({ initialTasks }: PlannerViewProps) {
                           className="p-1 border-l min-h-[60px]"
                         >
                           {dayTasks.map((task) => (
-                            <div
-                              key={task.id}
-                              className={`p-2 rounded text-xs cursor-pointer mb-1 hover:ring-2 hover:ring-primary transition-all ${
-                                task.done
-                                  ? 'bg-muted opacity-50 line-through'
-                                  : task.category === 'work'
-                                  ? 'bg-blue-100 dark:bg-blue-900'
-                                  : task.category === 'study'
-                                  ? 'bg-green-100 dark:bg-green-900'
-                                  : task.category === 'break'
-                                  ? 'bg-yellow-100 dark:bg-yellow-900'
-                                  : task.category === 'personal'
-                                  ? 'bg-purple-100 dark:bg-purple-900'
-                                  : 'bg-pink-100 dark:bg-pink-900'
-                              }`}
-                              onClick={() => handleEditTask(task)}
-                              title={task.title}
-                            >
-                              <div className="font-medium truncate">
-                                {task.title}
-                              </div>
-                              {task.start_ts && (
-                                <div className="text-xs opacity-75">
-                                  <Clock className="inline h-3 w-3 mr-1" />
-                                  {new Date(task.start_ts).toLocaleTimeString(
-                                    [],
-                                    { hour: '2-digit', minute: '2-digit' }
-                                  )}
+                            <TaskTooltip key={task.id} task={task}>
+                              <div
+                                className={`p-2 rounded text-xs cursor-pointer mb-1 hover:ring-2 hover:ring-primary transition-all ${
+                                  task.done
+                                    ? 'bg-muted opacity-50 line-through'
+                                    : task.category === 'work'
+                                    ? 'bg-blue-100 dark:bg-blue-900'
+                                    : task.category === 'study'
+                                    ? 'bg-green-100 dark:bg-green-900'
+                                    : task.category === 'break'
+                                    ? 'bg-yellow-100 dark:bg-yellow-900'
+                                    : task.category === 'personal'
+                                    ? 'bg-purple-100 dark:bg-purple-900'
+                                    : 'bg-pink-100 dark:bg-pink-900'
+                                }`}
+                                onClick={() => handleEditTask(task)}
+                              >
+                                <div className="font-medium truncate">
+                                  {task.title}
                                 </div>
-                              )}
-                            </div>
+                                {task.start_ts && (
+                                  <div className="text-xs opacity-75">
+                                    <Clock className="inline h-3 w-3 mr-1" />
+                                    {new Date(task.start_ts).toLocaleTimeString(
+                                      [],
+                                      { hour: '2-digit', minute: '2-digit' }
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            </TaskTooltip>
                           ))}
                         </div>
                       )

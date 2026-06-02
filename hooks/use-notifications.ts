@@ -3,13 +3,14 @@
 import { useEffect, useCallback, useState } from 'react'
 import { Task } from '@/lib/types'
 
-interface NotificationPermission {
-  status: NotificationPermission | 'default'
+// Renamed to avoid collision with the global `NotificationPermission` enum.
+interface NotificationPermissionState {
+  status: NotificationPermission
   granted: boolean
 }
 
 export function useNotifications() {
-  const [permission, setPermission] = useState<NotificationPermission>({
+  const [permission, setPermission] = useState<NotificationPermissionState>({
     status: 'default',
     granted: false,
   })
@@ -86,10 +87,10 @@ export function useNotifications() {
       const delay = notifyTime.getTime() - now.getTime()
 
       if (delay <= 0) {
-        // Task is in the past or very soon, show immediately
+        // Task is in the past or very soon, show immediately.
+        // `timestamp` is non-standard and stripped from the typed NotificationOptions.
         showNotification(`Task Starting: ${task.title}`, {
           body: task.detail || 'Time to start this task!',
-          timestamp: taskTime.getTime(),
         })
         return null
       }
@@ -97,7 +98,6 @@ export function useNotifications() {
       const timeoutId = setTimeout(() => {
         showNotification(`Task Starting Soon: ${task.title}`, {
           body: task.detail || `Starting in ${minutesBefore} minutes at ${taskTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
-          timestamp: taskTime.getTime(),
           requireInteraction: true,
         })
       }, delay)

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import type { Json } from '@/lib/supabase/database.types'
 import { createClient } from '@/lib/supabase/server'
 import { analyzePatterns } from '@/lib/ai/pattern-analysis'
 import { subDays, formatDate } from '@/lib/utils'
@@ -32,7 +33,7 @@ export async function POST(request: NextRequest) {
     // Fetch habits
     const { data: habits } = await supabase
       .from('habits')
-      .select('name, streak, frequency')
+      .select('name, streak')
       .eq('user_id', user.id)
 
     // Fetch notes
@@ -51,12 +52,12 @@ export async function POST(request: NextRequest) {
         date: t.date,
         done: t.done,
         category: t.category || 'general',
-        duration_minutes: t.duration_minutes,
+        duration_minutes: t.duration_minutes ?? undefined,
       })),
       (habits || []).map((h) => ({
         name: h.name,
         streak: h.streak || 0,
-        frequency: h.frequency || 'daily',
+        frequency: 'daily' as const,
       })),
       (notes || []).map((n) => ({
         date: n.date,
@@ -73,7 +74,7 @@ export async function POST(request: NextRequest) {
         start_date: startDate,
         end_date: endDate,
       },
-      response: analysis,
+      response: analysis as unknown as Json,
     })
 
     return NextResponse.json({

@@ -46,7 +46,7 @@ export async function predictEnergy(
     .gt('streak', 0)
 
   const streakMaintenance = habits?.length || 0
-  const avgStreak = habits?.length > 0
+  const avgStreak = habits && habits.length > 0
     ? habits.reduce((sum, h) => sum + h.streak, 0) / habits.length
     : 0
 
@@ -91,10 +91,11 @@ export async function predictEnergy(
     .eq('pattern_type', 'best_time')
     .single()
 
-  const peakHours = patterns?.pattern_data?.best_hours || []
+  const patternData = (patterns?.pattern_data ?? {}) as { best_hours?: Array<{ hour: number }> }
+  const peakHours = patternData.best_hours || []
   const peakHourStrings = peakHours
     .slice(0, 3)
-    .map((h: any) => `${h.hour}:00`)
+    .map((h) => `${h.hour}:00`)
 
   // Calculate energy score (0-1)
   let energyScore = 0

@@ -18,7 +18,9 @@ export function TaskFilters({ tasks, onFilteredTasks }: TaskFiltersProps) {
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [dateFilter, setDateFilter] = useState<string>('all')
 
-  const categories = Array.from(new Set(tasks.map((t) => t.category).filter(Boolean)))
+  const categories = Array.from(
+    new Set(tasks.map((t) => t.category).filter((c): c is string => Boolean(c)))
+  )
 
   const applyFilters = () => {
     let filtered = [...tasks]

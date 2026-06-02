@@ -129,7 +129,7 @@ export default function LoginPage() {
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!validateForm()) return
+    if (!performFormValidation()) return
     
     setLoading(true)
     setErrors({})
@@ -165,7 +165,7 @@ export default function LoginPage() {
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!email || !validateEmail(email)) {
+    if (!email || !isValidEmailFormat(email)) {
       setErrors({ email: 'Please enter a valid email address' })
       return
     }
@@ -268,7 +268,7 @@ export default function LoginPage() {
               <div>
                 <h3 className="text-xl font-semibold mb-2">Check your email</h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  We've sent instructions to <strong>{email}</strong>
+                  We&apos;ve sent instructions to <strong>{email}</strong>
                 </p>
               </div>
               <Button
@@ -404,7 +404,7 @@ export default function LoginPage() {
               <div className="text-center space-y-2 pt-2">
                 {mode === 'login' ? (
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Don't have an account?{' '}
+                    Don&apos;t have an account?{' '}
                     <button
                       type="button"
                       onClick={() => {

@@ -104,6 +104,7 @@ export async function POST(request: NextRequest) {
     const { data: milestone, error: insertError } = await supabase
       .from('milestones')
       .insert({
+        user_id: user.id,
         project_id: project_id || null,
         goal_id: goal_id || null,
         name,

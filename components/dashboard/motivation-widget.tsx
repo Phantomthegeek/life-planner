@@ -37,9 +37,15 @@ export function MotivationWidget() {
 
   if (!motivation) return null
 
-  const { type, message, action_url, action_text } = motivation
+  type MotivationType = 'achievement' | 'encouragement' | 'warning' | 'celebration'
+  const { type, message, action_url, action_text } = motivation as {
+    type: MotivationType
+    message: string
+    action_url?: string
+    action_text?: string
+  }
 
-  const icons = {
+  const icons: Record<MotivationType, typeof Sparkles> = {
     achievement: Trophy,
     encouragement: TrendingUp,
     warning: AlertCircle,
@@ -48,7 +54,7 @@ export function MotivationWidget() {
 
   const Icon = icons[type] || Sparkles
 
-  const colors = {
+  const colors: Record<MotivationType, string> = {
     achievement: 'bg-yellow-500/10 border-yellow-500/50 text-yellow-700 dark:text-yellow-400',
     encouragement: 'bg-blue-500/10 border-blue-500/50 text-blue-700 dark:text-blue-400',
     warning: 'bg-orange-500/10 border-orange-500/50 text-orange-700 dark:text-orange-400',

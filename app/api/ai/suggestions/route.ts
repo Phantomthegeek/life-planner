@@ -32,10 +32,12 @@ export async function GET(request: NextRequest) {
     // Generate personalized suggestions
     const suggestions: Array<{ type: string; message: string; action?: any }> = []
 
-    // Best time suggestions
+    // Best time suggestions. `pattern_data` is a free-form jsonb column, so we
+    // narrow it to the shape we expect at the call-site.
     const bestTimePattern = patterns?.find((p) => p.pattern_type === 'best_time')
     if (bestTimePattern) {
-      const bestHours = bestTimePattern.pattern_data?.best_hours || []
+      const data = (bestTimePattern.pattern_data ?? {}) as { best_hours?: Array<{ hour: number }> }
+      const bestHours = data.best_hours || []
       if (bestHours.length > 0) {
         suggestions.push({
           type: 'optimal_time',
@@ -51,7 +53,8 @@ export async function GET(request: NextRequest) {
     // Duration suggestions
     const durationPattern = patterns?.find((p) => p.pattern_type === 'duration_accuracy')
     if (durationPattern) {
-      const recommendation = durationPattern.pattern_data?.recommendation
+      const data = (durationPattern.pattern_data ?? {}) as { recommendation?: string }
+      const recommendation = data.recommendation
       if (recommendation) {
         suggestions.push({
           type: 'time_estimation',
