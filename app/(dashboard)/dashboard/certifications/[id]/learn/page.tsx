@@ -123,10 +123,28 @@ export default function LearnPage() {
     () => lessons.filter((l) => completedLessons.has(l.id)).length,
     [lessons, completedLessons]
   )
-  const certProgressPct = useMemo(
-    () => (totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0),
-    [completedCount, totalLessons]
-  )
+
+  // Course progress is *module-based*: a module counts as complete when every
+  // one of its lessons is checked off. Empty modules (no lessons yet) don't
+  // count toward the denominator — otherwise a fresh course would show 0%
+  // even though there's nothing to do yet.
+  const moduleProgress = useMemo(() => {
+    const modulesWithLessons = modules.filter((m) =>
+      lessons.some((l) => l.module_id === m.id)
+    )
+    if (modulesWithLessons.length === 0) {
+      return { complete: 0, total: 0, pct: 0 }
+    }
+    const complete = modulesWithLessons.filter((m) => {
+      const ls = lessons.filter((l) => l.module_id === m.id)
+      return ls.length > 0 && ls.every((l) => completedLessons.has(l.id))
+    }).length
+    return {
+      complete,
+      total: modulesWithLessons.length,
+      pct: Math.round((complete / modulesWithLessons.length) * 100),
+    }
+  }, [modules, lessons, completedLessons])
 
   const persistCertProgress = async (pct: number) => {
     try {
@@ -140,6 +158,21 @@ export default function LearnPage() {
     }
   }
 
+  // Recompute module progress with a forward-looking `next` set so we can
+  // call this from handlers that just toggled a lesson without waiting for
+  // React state to flush.
+  const computeModulePct = (nextCompleted: Set<string>): number => {
+    const modulesWithLessons = modules.filter((m) =>
+      lessons.some((l) => l.module_id === m.id)
+    )
+    if (modulesWithLessons.length === 0) return 0
+    const complete = modulesWithLessons.filter((m) => {
+      const ls = lessons.filter((l) => l.module_id === m.id)
+      return ls.length > 0 && ls.every((l) => nextCompleted.has(l.id))
+    }).length
+    return Math.round((complete / modulesWithLessons.length) * 100)
+  }
+
   const handleLessonComplete = async (lessonId: string) => {
     if (completedLessons.has(lessonId)) return
     const next = new Set(completedLessons)
@@ -147,19 +180,24 @@ export default function LearnPage() {
     setCompletedLessons(next)
     saveCompleted(certId, next)
 
-    const newCompletedCount = lessons.filter((l) => next.has(l.id)).length
-    const newPct = totalLessons > 0
-      ? Math.round((newCompletedCount / totalLessons) * 100)
-      : 0
-
+    const newPct = computeModulePct(next)
     await persistCertProgress(newPct)
 
+    // Did this lesson just complete its module? Give the user a clearer ping.
+    const lesson = lessons.find((l) => l.id === lessonId)
+    const moduleLessonsAll = lesson
+      ? lessons.filter((l) => l.module_id === lesson.module_id)
+      : []
+    const justFinishedModule =
+      moduleLessonsAll.length > 0 &&
+      moduleLessonsAll.every((l) => next.has(l.id))
+
     toast({
-      title: 'Lesson completed',
+      title: justFinishedModule ? 'Module complete' : 'Lesson complete',
       description:
         newPct === 100
-          ? 'You finished every lesson. Time to schedule the exam.'
-          : `Cert progress: ${newPct}%`,
+          ? 'You finished every module. Time to schedule the exam.'
+          : `Course progress: ${newPct}%`,
     })
   }
 
@@ -548,13 +586,18 @@ export default function LearnPage() {
                 <h2 className="text-xl font-semibold">{selectedModule.title}</h2>
                 <p className="text-sm text-muted-foreground">
                   {moduleLessons.length} lesson{moduleLessons.length !== 1 ? 's' : ''}
-                  {totalLessons > 0 && (
+                  {moduleProgress.total > 0 && (
                     <>
                       {' · '}
                       <span className="text-foreground font-medium">
-                        {completedCount}/{totalLessons}
+                        {moduleProgress.complete}/{moduleProgress.total}
                       </span>
-                      {' done overall'}
+                      {' modules done'}
+                      {totalLessons > 0 && (
+                        <span className="text-muted-foreground">
+                          {' '}({completedCount}/{totalLessons} lessons)
+                        </span>
+                      )}
                     </>
                   )}
                 </p>

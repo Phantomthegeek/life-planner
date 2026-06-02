@@ -73,6 +73,8 @@ export default function CertificationDetailPage() {
   const [moduleToDelete, setModuleToDelete] = useState<string | null>(null)
   const [totalLessons, setTotalLessons] = useState(0)
   const [completedLessons, setCompletedLessons] = useState(0)
+  const [completedModules, setCompletedModules] = useState(0)
+  const [modulesWithLessons, setModulesWithLessons] = useState(0)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -84,18 +86,37 @@ export default function CertificationDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [certId])
 
+  // Pull lessons + group by module so we can show module-level completion
+  // stats. Module is "complete" when every lesson under it is checked off in
+  // the user's local progress set.
   const refreshLessonProgress = async () => {
     try {
       const res = await fetch(`/api/certifications/${certId}/lessons`)
       if (!res.ok) return
-      const lessonsData: Array<{ id: string }> = await res.json()
+      const lessonsData: Array<{ id: string; module_id: string }> = await res.json()
       setTotalLessons(lessonsData.length)
-      if (typeof window !== 'undefined') {
-        const raw = window.localStorage.getItem(`arcana-cert-completed-${certId}`)
-        const done: string[] = raw ? JSON.parse(raw) : []
-        const validDone = lessonsData.filter((l) => done.includes(l.id)).length
-        setCompletedLessons(validDone)
+
+      const done: string[] =
+        typeof window !== 'undefined'
+          ? JSON.parse(
+              window.localStorage.getItem(`arcana-cert-completed-${certId}`) || '[]'
+            )
+          : []
+      const doneSet = new Set(done)
+
+      setCompletedLessons(lessonsData.filter((l) => doneSet.has(l.id)).length)
+
+      // Group lessons by module, then count modules where every lesson is done.
+      const byModule = new Map<string, { total: number; done: number }>()
+      for (const lesson of lessonsData) {
+        const entry = byModule.get(lesson.module_id) || { total: 0, done: 0 }
+        entry.total += 1
+        if (doneSet.has(lesson.id)) entry.done += 1
+        byModule.set(lesson.module_id, entry)
       }
+      const populated = Array.from(byModule.values())
+      setModulesWithLessons(populated.length)
+      setCompletedModules(populated.filter((m) => m.total > 0 && m.done === m.total).length)
     } catch {
       /* ignore */
     }
@@ -427,7 +448,7 @@ export default function CertificationDetailPage() {
             <div className="space-y-4">
               <EnhancedProgress
                 value={currentProgress}
-                label="Overall Progress"
+                label="Modules complete"
                 animated={true}
                 showIcon={true}
                 variant={currentProgress === 100 ? 'success' : currentProgress > 75 ? 'default' : currentProgress > 50 ? 'warning' : 'error'}
@@ -447,25 +468,27 @@ export default function CertificationDetailPage() {
               </div>
             )}
             <p className="text-xs text-muted-foreground">
-              Progress updates automatically as you complete lessons in the learn view.
+              A module counts when every lesson in it is checked off.
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Lessons</CardTitle>
+            <CardTitle>Modules</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">
-              {completedLessons} / {totalLessons || '—'}
+              {completedModules} / {modulesWithLessons || totalModules || '—'}
             </div>
             <p className="text-sm text-muted-foreground">
-              {totalLessons === 0
-                ? 'No lessons generated yet'
-                : completedLessons === totalLessons && totalLessons > 0
-                ? 'All lessons completed'
-                : 'Lessons completed'}
+              {totalModules === 0
+                ? 'No modules yet'
+                : modulesWithLessons === 0
+                ? 'Generate lessons to start tracking'
+                : completedModules === modulesWithLessons
+                ? 'All modules complete'
+                : `${totalLessons > 0 ? `${completedLessons}/${totalLessons} lessons` : 'modules completed'}`}
             </p>
           </CardContent>
         </Card>
