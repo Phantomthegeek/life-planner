@@ -47,9 +47,17 @@ import { QuizInterface } from '@/components/learning/quiz-interface'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 
+// localStorage is now a write-through cache, not the source of truth. The
+// server (cert_progress_detailed) owns lesson completion so it syncs across
+// devices. We still cache locally so:
+//   1. The UI paints something immediately on load before the GET resolves.
+//   2. If the user goes offline mid-session, the completion list stays usable.
+//   3. We can detect orphaned localStorage data and migrate it on first load.
 const completedKey = (certId: string) => `arcana-cert-completed-${certId}`
+// Marker so we only attempt the legacy-localStorage migration once per cert.
+const migrationKey = (certId: string) => `arcana-cert-completed-migrated-${certId}`
 
-function loadCompleted(certId: string): Set<string> {
+function loadCompletedFromCache(certId: string): Set<string> {
   if (typeof window === 'undefined') return new Set()
   try {
     const raw = window.localStorage.getItem(completedKey(certId))
@@ -61,7 +69,7 @@ function loadCompleted(certId: string): Set<string> {
   }
 }
 
-function saveCompleted(certId: string, ids: Set<string>) {
+function writeCompletedCache(certId: string, ids: Set<string>) {
   if (typeof window === 'undefined') return
   try {
     window.localStorage.setItem(
@@ -69,7 +77,7 @@ function saveCompleted(certId: string, ids: Set<string>) {
       JSON.stringify(Array.from(ids))
     )
   } catch {
-    /* ignore */
+    /* ignore quota or privacy-mode errors */
   }
 }
 
@@ -135,8 +143,75 @@ export default function LearnPage() {
   // Confirmation dialog for per-lesson delete.
   const [deleteLessonTarget, setDeleteLessonTarget] = useState<string | null>(null)
 
+  // Hydrate completion state in two phases:
+  //   1. Synchronously from localStorage so the UI doesn't flash empty.
+  //   2. Asynchronously from the server, which becomes the source of truth.
+  //
+  // If we discover legacy localStorage data on the first server load and the
+  // server has none of it, push it up so users don't lose progress from
+  // before this feature existed. After that the local cache is just a mirror.
   useEffect(() => {
-    setCompletedLessons(loadCompleted(certId))
+    setCompletedLessons(loadCompletedFromCache(certId))
+
+    let cancelled = false
+
+    const syncFromServer = async () => {
+      try {
+        const res = await fetch(`/api/certifications/${certId}/lesson-progress`, {
+          cache: 'no-store',
+        })
+        if (!res.ok) {
+          // 401 / 500 / offline — keep the cache, sync next visit.
+          return
+        }
+        const data = await res.json().catch(() => null) as
+          | { completed_lesson_ids?: string[] }
+          | null
+        if (cancelled) return
+
+        const serverIds = new Set<string>(data?.completed_lesson_ids || [])
+
+        // First-visit migration: localStorage had completions, server doesn't.
+        const cached = loadCompletedFromCache(certId)
+        const alreadyMigrated =
+          typeof window !== 'undefined' &&
+          !!window.localStorage.getItem(migrationKey(certId))
+        const needsMigration =
+          !alreadyMigrated && cached.size > 0 && serverIds.size === 0
+
+        if (needsMigration) {
+          try {
+            await fetch(`/api/certifications/${certId}/lesson-progress`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ lesson_ids: Array.from(cached) }),
+            })
+            if (typeof window !== 'undefined') {
+              window.localStorage.setItem(migrationKey(certId), '1')
+            }
+            // Server is now authoritative and matches the cache.
+            setCompletedLessons(cached)
+          } catch {
+            // Migration failed — leave cache in place and try again later.
+          }
+          return
+        }
+
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem(migrationKey(certId), '1')
+        }
+        setCompletedLessons(serverIds)
+        writeCompletedCache(certId, serverIds)
+      } catch {
+        // Network failure — silently fall back to the cache that we already
+        // applied in the synchronous step above.
+      }
+    }
+
+    syncFromServer()
+    return () => {
+      cancelled = true
+    }
   }, [certId])
 
   // Track viewport so we can default the drawer to closed on mobile and make
@@ -214,11 +289,45 @@ export default function LearnPage() {
     if (completedLessons.has(lessonId)) return
     const next = new Set(completedLessons)
     next.add(lessonId)
+    // Optimistic: update UI + write-through cache immediately so the user
+    // sees the tick instantly. Server writes happen below.
     setCompletedLessons(next)
-    saveCompleted(certId, next)
+    writeCompletedCache(certId, next)
 
     const newPct = computeModulePct(next)
-    await persistCertProgress(newPct)
+
+    // Persist both the per-lesson completion (for cross-device sync) AND the
+    // cert-level summary (so the certs list and dashboard cards don't lag
+    // behind). We do these in parallel — the lesson-progress call is the
+    // one that matters most; the summary is derived.
+    const lessonProgressPromise = fetch(
+      `/api/certifications/${certId}/lesson-progress`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lesson_id: lessonId, status: 'completed' }),
+      }
+    ).catch((err) => {
+      console.error('Failed to persist lesson completion:', err)
+      return null
+    })
+
+    const [lessonProgressRes] = await Promise.all([
+      lessonProgressPromise,
+      persistCertProgress(newPct),
+    ])
+
+    // If the server rejected the write, surface a non-blocking warning so the
+    // user knows it might not be on other devices. We don't roll back the UI
+    // because the cache still reflects their intent.
+    if (lessonProgressRes && !lessonProgressRes.ok) {
+      console.warn('Lesson progress write failed', await lessonProgressRes.text().catch(() => ''))
+      toast({
+        title: 'Saved locally',
+        description: 'We couldn\u2019t sync this to your other devices. We\u2019ll retry next time you open the lesson.',
+        variant: 'destructive',
+      })
+    }
 
     // Did this lesson just complete its module? Give the user a clearer ping.
     const lesson = lessons.find((l) => l.id === lessonId)
@@ -229,13 +338,15 @@ export default function LearnPage() {
       moduleLessonsAll.length > 0 &&
       moduleLessonsAll.every((l) => next.has(l.id))
 
-    toast({
-      title: justFinishedModule ? 'Module complete' : 'Lesson complete',
-      description:
-        newPct === 100
-          ? 'You finished every module. Time to schedule the exam.'
-          : `Course progress: ${newPct}%`,
-    })
+    if (lessonProgressRes?.ok ?? true) {
+      toast({
+        title: justFinishedModule ? 'Module complete' : 'Lesson complete',
+        description:
+          newPct === 100
+            ? 'You finished every module. Time to schedule the exam.'
+            : `Course progress: ${newPct}%`,
+      })
+    }
   }
 
   const openQuickQuiz = async () => {
@@ -347,6 +458,19 @@ export default function LearnPage() {
         variant: data.warning ? 'destructive' : 'default',
       })
 
+      // Regenerating replaces the lesson rows. The cascading FK on
+      // cert_progress_detailed cleans the old completion rows, but our
+      // in-memory set still has the dead IDs. Drop completions for this
+      // module so the UI doesn't show ghost ticks.
+      if (regenerate) {
+        const next = new Set(completedLessons)
+        for (const lesson of lessons) {
+          if (lesson.module_id === moduleId) next.delete(lesson.id)
+        }
+        setCompletedLessons(next)
+        writeCompletedCache(certId, next)
+      }
+
       await fetchModulesAndLessons()
     } catch (error: any) {
       toast({
@@ -376,7 +500,23 @@ export default function LearnPage() {
       const next = new Set(completedLessons)
       next.delete(lessonId)
       setCompletedLessons(next)
-      saveCompleted(certId, next)
+      writeCompletedCache(certId, next)
+
+      // Best-effort: also wipe the server completion row so the lesson
+      // doesn't reappear as "complete" if the user regenerates it later
+      // with the same ID, and so other devices don't keep a stale tick.
+      // FK from cert_progress_detailed.lesson_id has ON DELETE cascade so
+      // this is also self-healing once the cert_lessons row is gone, but
+      // doing it explicitly here makes the intent clear.
+      fetch(
+        `/api/certifications/${certId}/lesson-progress?lesson_id=${lessonId}`,
+        { method: 'DELETE' }
+      ).catch(() => {})
+
+      // Recompute cert % so other surfaces don't lag behind.
+      const newPct = computeModulePct(next)
+      persistCertProgress(newPct).catch(() => {})
+
       await fetchModulesAndLessons()
       toast({ title: 'Lesson deleted' })
     } catch (error: any) {

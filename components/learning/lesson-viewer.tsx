@@ -83,24 +83,31 @@ export function LessonViewer({
   ]
 
   return (
-    <div className="space-y-6">
-      <div className="space-y-3">
-        <div className="flex items-start justify-between gap-4">
+    <div className="space-y-4 md:space-y-6">
+      <div className="space-y-2 md:space-y-3">
+        <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
-            <h1 className="text-3xl font-semibold tracking-tight">{lesson.title}</h1>
+            {/* Headline scales down hard on phones; without this it competes
+                with the top bar's module title above it. */}
+            <h1 className="text-xl md:text-3xl font-semibold tracking-tight leading-snug break-words">
+              {lesson.title}
+            </h1>
             {lesson.description && (
-              <p className="text-muted-foreground mt-2">{lesson.description}</p>
+              <p className="text-sm md:text-base text-muted-foreground mt-1.5 md:mt-2">
+                {lesson.description}
+              </p>
             )}
           </div>
           {isCompleted && (
-            <Badge variant="outline" className="gap-1.5 flex-shrink-0">
+            <Badge variant="outline" className="gap-1.5 flex-shrink-0 text-xs">
               <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
-              Completed
+              <span className="hidden sm:inline">Completed</span>
+              <span className="sm:hidden">Done</span>
             </Badge>
           )}
         </div>
 
-        <div className="flex items-center gap-3 text-sm text-muted-foreground flex-wrap">
+        <div className="flex items-center gap-2 md:gap-3 text-xs md:text-sm text-muted-foreground flex-wrap">
           <span className="flex items-center gap-1.5">
             <Clock className="h-3.5 w-3.5" />
             {lesson.estimated_minutes} min
@@ -109,49 +116,56 @@ export function LessonViewer({
           <span>Level {lesson.difficulty_level}/5</span>
           {progress > 0 && (
             <>
-              <span aria-hidden>·</span>
-              <span className="flex-1 max-w-[200px] flex items-center gap-2">
+              <span aria-hidden className="hidden sm:inline">·</span>
+              {/* Progress bar wraps onto its own line on phones so it
+                  doesn't squeeze against the rest of the meta row. */}
+              <span className="w-full sm:w-auto sm:flex-1 sm:max-w-[200px] flex items-center gap-2">
                 <Progress value={progress} className="h-1.5 flex-1" />
-                <span className="text-xs">{progress}%</span>
+                <span className="text-xs tabular-nums">{progress}%</span>
               </span>
             </>
           )}
         </div>
       </div>
 
-      <div className="flex gap-1 border-b">
-        {sections.map((section) => {
-          const Icon = section.icon
-          const isActive = activeSection === section.id
-          const hasContent = content[section.id as keyof LessonContent]
+      {/* Tab strip — scrolls horizontally on mobile so four tabs with icons
+          never wrap or overflow the viewport. `scrollbar-hide` keeps the row
+          looking clean since the active state already shows position. */}
+      <div className="border-b overflow-x-auto scrollbar-hide">
+        <div className="flex gap-1 min-w-max">
+          {sections.map((section) => {
+            const Icon = section.icon
+            const isActive = activeSection === section.id
+            const hasContent = content[section.id as keyof LessonContent]
 
-          return (
-            <button
-              key={section.id}
-              onClick={() => hasContent && setActiveSection(section.id as any)}
-              disabled={!hasContent}
-              className={cn(
-                'flex items-center gap-2 px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors',
-                isActive
-                  ? 'border-foreground text-foreground'
-                  : 'border-transparent text-muted-foreground hover:text-foreground',
-                !hasContent && 'opacity-40 cursor-not-allowed hover:text-muted-foreground'
-              )}
-            >
-              <Icon className="h-3.5 w-3.5" />
-              {section.label}
-            </button>
-          )
-        })}
+            return (
+              <button
+                key={section.id}
+                onClick={() => hasContent && setActiveSection(section.id as any)}
+                disabled={!hasContent}
+                className={cn(
+                  'flex items-center gap-1.5 md:gap-2 px-2.5 md:px-3 py-2 text-xs md:text-sm font-medium border-b-2 -mb-px transition-colors flex-shrink-0 whitespace-nowrap',
+                  isActive
+                    ? 'border-foreground text-foreground'
+                    : 'border-transparent text-muted-foreground hover:text-foreground',
+                  !hasContent && 'opacity-40 cursor-not-allowed hover:text-muted-foreground'
+                )}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {section.label}
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       <div key={activeSection}>
           <Card>
-            <CardContent className="p-6 md:p-8">
+            <CardContent className="p-4 md:p-8">
               {activeSection === 'intro' && content.intro && (
-                <div className="space-y-8">
+                <div className="space-y-6 md:space-y-8">
                   <div>
-                    <p className="text-base leading-relaxed">{content.intro.overview}</p>
+                    <p className="text-sm md:text-base leading-relaxed">{content.intro.overview}</p>
                   </div>
 
                   <div className="grid md:grid-cols-2 gap-6">
@@ -196,21 +210,25 @@ export function LessonViewer({
                       <div key={idx} className="border rounded-md">
                         <button
                           type="button"
-                          className="w-full flex items-center justify-between p-4 text-left hover:bg-muted/40 transition-colors"
+                          className="w-full flex items-center justify-between gap-3 p-3 md:p-4 text-left hover:bg-muted/40 transition-colors"
                           onClick={() => toggleConcept(idx)}
                           aria-expanded={expanded}
                         >
-                          <span className="font-medium">{concept.title}</span>
+                          {/* min-w-0 lets the title wrap inside flex instead of
+                              overflowing the card horizontally. */}
+                          <span className="font-medium text-sm md:text-base min-w-0 break-words">
+                            {concept.title}
+                          </span>
                           <ChevronRight
                             className={cn(
-                              'h-4 w-4 text-muted-foreground transition-transform',
+                              'h-4 w-4 text-muted-foreground transition-transform flex-shrink-0',
                               expanded && 'rotate-90'
                             )}
                           />
                         </button>
                         {expanded && (
-                          <div className="px-4 pb-4 space-y-4 border-t pt-4">
-                            <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                          <div className="px-3 md:px-4 pb-3 md:pb-4 space-y-4 border-t pt-3 md:pt-4">
+                            <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
                               {concept.explanation}
                             </p>
 
@@ -295,7 +313,7 @@ export function LessonViewer({
 
               {activeSection === 'summary' && content.summary && (
                 <div className="space-y-6">
-                  <p className="text-base leading-relaxed">{content.summary.recap}</p>
+                  <p className="text-sm md:text-base leading-relaxed">{content.summary.recap}</p>
 
                   <div className="grid md:grid-cols-2 gap-6">
                     <div>
