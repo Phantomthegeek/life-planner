@@ -3,8 +3,6 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Search, FileText, CheckSquare, FolderOpen, BookOpen } from 'lucide-react'
 
 interface SearchResult {
@@ -162,28 +160,18 @@ export function GlobalSearch() {
 
   return (
     <>
-      <div className="relative w-full">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-        <Input
-          type="text"
-          placeholder="Search tasks, notes, projects... (⌘K)"
-          value={query}
-          onChange={(e) => {
-            setQuery(e.target.value)
-            if (e.target.value.length >= 2) {
-              setOpen(true)
-            }
-          }}
-          onFocus={() => {
-            if (query.length >= 2) {
-              setOpen(true)
-            }
-          }}
-          className="pl-10 w-full cursor-pointer"
-          readOnly
-          onClick={() => setOpen(true)}
-        />
-      </div>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="w-full flex items-center gap-2 h-9 px-3 rounded-md border border-input bg-background text-sm text-muted-foreground hover:bg-muted/40 hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        aria-label="Open search"
+      >
+        <Search className="h-4 w-4 flex-shrink-0" />
+        <span className="flex-1 text-left truncate">Search tasks, notes, projects…</span>
+        <kbd className="hidden sm:inline-flex items-center gap-0.5 text-[10px] font-medium text-muted-foreground bg-muted border border-border rounded px-1.5 py-0.5">
+          <span className="text-xs">⌘</span>K
+        </kbd>
+      </button>
       <CommandDialog open={open} onOpenChange={setOpen}>
         <CommandInput
           placeholder="Search tasks, notes, projects, courses..."

@@ -28,6 +28,8 @@ import {
   X,
   Trophy,
   Loader2,
+  RefreshCw,
+  Trash2,
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { LessonViewer } from '@/components/learning/lesson-viewer'
@@ -237,32 +239,73 @@ export default function LearnPage() {
     }
   }
 
-  const handleGenerateLessons = async (moduleId: string) => {
+  const handleGenerateLessons = async (moduleId: string, regenerate = false) => {
     try {
       setGenerating(true)
       const response = await fetch(`/api/certifications/${certId}/lessons`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ module_id: moduleId }),
+        body: JSON.stringify({ module_id: moduleId, regenerate }),
       })
 
-      if (!response.ok) throw new Error('Failed to generate lessons')
+      const data = await response.json().catch(() => ({}))
 
+      // 409 = lessons already exist. Confirm with the user before clobbering.
+      if (response.status === 409) {
+        const confirmed = window.confirm(
+          `This module already has ${data.existing_count ?? 'some'} lessons. Regenerate and replace them?`
+        )
+        if (!confirmed) return
+        return handleGenerateLessons(moduleId, true)
+      }
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to generate lessons')
+      }
+
+      const count = Array.isArray(data.lessons) ? data.lessons.length : 0
       toast({
-        title: 'Success!',
-        description: 'Lessons generated successfully. Refreshing...',
+        title: count > 0 ? `Generated ${count} lesson${count === 1 ? '' : 's'}` : 'Done',
+        description: data.warning || 'Refreshing…',
+        variant: data.warning ? 'destructive' : 'default',
       })
 
-      // Refresh lessons
       await fetchModulesAndLessons()
     } catch (error: any) {
       toast({
-        title: 'Error',
-        description: error.message || 'Failed to generate lessons',
+        title: 'Lesson generation failed',
+        description: error.message || 'Try again in a moment.',
         variant: 'destructive',
       })
     } finally {
       setGenerating(false)
+    }
+  }
+
+  const handleDeleteLesson = async (lessonId: string) => {
+    if (!window.confirm('Delete this lesson? Its content will be removed.')) return
+    try {
+      const res = await fetch(
+        `/api/certifications/${certId}/lessons?lesson_id=${lessonId}`,
+        { method: 'DELETE' }
+      )
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || 'Failed to delete lesson')
+      }
+      if (selectedLesson?.id === lessonId) setSelectedLesson(null)
+      const next = new Set(completedLessons)
+      next.delete(lessonId)
+      setCompletedLessons(next)
+      saveCompleted(certId, next)
+      await fetchModulesAndLessons()
+      toast({ title: 'Lesson deleted' })
+    } catch (error: any) {
+      toast({
+        title: 'Could not delete lesson',
+        description: error.message,
+        variant: 'destructive',
+      })
     }
   }
 
@@ -392,20 +435,42 @@ export default function LearnPage() {
                                   </Button>
                                 )}
 
+                                {hasLessons && (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="w-full text-xs text-muted-foreground hover:text-foreground"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      handleGenerateLessons(module.id, true)
+                                    }}
+                                    disabled={generating}
+                                  >
+                                    {generating ? (
+                                      <>
+                                        <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                                        Regenerating…
+                                      </>
+                                    ) : (
+                                      <>
+                                        <RefreshCw className="mr-2 h-3 w-3" />
+                                        Regenerate lessons
+                                      </>
+                                    )}
+                                  </Button>
+                                )}
+
                                 {lessons
                                   .filter(l => l.module_id === module.id)
                                   .sort((a, b) => a.order_idx - b.order_idx)
-                                  .map((lesson, idx) => {
+                                  .map((lesson) => {
                                     const isDone = completedLessons.has(lesson.id)
                                     const isActive = selectedLesson?.id === lesson.id
                                     return (
-                                      <motion.div
+                                      <div
                                         key={lesson.id}
-                                        initial={{ opacity: 0, x: -10 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        transition={{ delay: idx * 0.05 }}
                                         className={cn(
-                                          'flex items-center gap-2 p-2 rounded-md cursor-pointer transition-all',
+                                          'group flex items-center gap-2 p-2 rounded-md cursor-pointer transition-colors',
                                           isActive
                                             ? 'bg-primary/10 border border-primary/20'
                                             : 'hover:bg-muted'
@@ -436,7 +501,18 @@ export default function LearnPage() {
                                             </span>
                                           </div>
                                         </div>
-                                      </motion.div>
+                                        <button
+                                          type="button"
+                                          aria-label="Delete lesson"
+                                          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive flex-shrink-0"
+                                          onClick={(e) => {
+                                            e.stopPropagation()
+                                            handleDeleteLesson(lesson.id)
+                                          }}
+                                        >
+                                          <Trash2 className="h-3 w-3" />
+                                        </button>
+                                      </div>
                                     )
                                   })}
                               </CardContent>

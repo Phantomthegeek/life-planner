@@ -1,48 +1,19 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { useEffect, useState } from 'react'
+import Link from 'next/link'
+import { useTheme } from 'next-themes'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Switch } from '@/components/ui/switch'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Separator } from '@/components/ui/separator'
-import { Badge } from '@/components/ui/badge'
-import { useTheme } from 'next-themes'
-import { 
-  Settings, 
-  Moon, 
-  Sun, 
-  Monitor, 
-  Loader2, 
-  Save, 
-  User,
-  Bell,
-  Brain,
-  Shield,
-  Keyboard,
-  Globe,
-  Zap,
-  Database,
-  Mail,
-  Clock,
-  Palette,
-  Volume2,
-  Eye,
-  Trash2,
-  Download,
-  Upload,
-  AlertTriangle,
-  CheckCircle2,
-  Info
-} from 'lucide-react'
-import { useToast } from '@/hooks/use-toast'
-import { createClient } from '@/lib/supabase/client'
-import Link from 'next/link'
-import { ThemeSelector } from '@/components/theme-selector'
-import { applyTheme, getSavedTheme, getThemeBaseId, type ThemeId } from '@/lib/theme-utils'
-import { ExportDialog } from '@/components/export-import/export-dialog'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -54,152 +25,78 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Slider } from '@/components/ui/slider'
+import { Sun, Moon, Monitor, Loader2, Save, Bell, Upload, Trash2 } from 'lucide-react'
+import { useToast } from '@/hooks/use-toast'
+import { createClient } from '@/lib/supabase/client'
+import { ThemeSelector } from '@/components/theme-selector'
+import { applyTheme, getSavedTheme, getThemeBaseId, type ThemeId } from '@/lib/theme-utils'
+import { ExportDialog } from '@/components/export-import/export-dialog'
 
-interface UserSettings {
+// Only the fields that the rest of the app actually reads. wake/sleep/work
+// hours feed the AI coach; full_name shows up in greetings.
+interface ProfileSettings {
+  full_name: string | null
   wake_time: string
   sleep_time: string
   work_hours_start: string
   work_hours_end: string
-  full_name: string | null
-  // New settings
-  notifications_enabled: boolean
-  email_notifications: boolean
-  task_reminders: boolean
-  habit_reminders: boolean
-  ai_model: string
-  ai_temperature: number
-  auto_save: boolean
-  compact_mode: boolean
-  sound_enabled: boolean
-  language: string
-  timezone: string
+}
+
+const DEFAULT_SETTINGS: ProfileSettings = {
+  full_name: null,
+  wake_time: '07:00',
+  sleep_time: '23:00',
+  work_hours_start: '09:00',
+  work_hours_end: '17:00',
 }
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme()
-  const [currentTheme, setCurrentTheme] = useState<string>('default')
+  const { toast } = useToast()
+
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [activeTab, setActiveTab] = useState('appearance')
-  const [settings, setSettings] = useState<UserSettings>({
-    wake_time: '07:00',
-    sleep_time: '23:00',
-    work_hours_start: '09:00',
-    work_hours_end: '17:00',
-    full_name: null,
-    notifications_enabled: true,
-    email_notifications: true,
-    task_reminders: true,
-    habit_reminders: true,
-    ai_model: 'gpt-4',
-    ai_temperature: 0.7,
-    auto_save: true,
-    compact_mode: false,
-    sound_enabled: true,
-    language: 'en',
-    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-  })
-  const { toast } = useToast()
-  const supabase = createClient()
+  const [currentTheme, setCurrentTheme] = useState<string>('default')
+  const [settings, setSettings] = useState<ProfileSettings>(DEFAULT_SETTINGS)
 
   useEffect(() => {
-    fetchSettings()
-    
-    // Load and apply saved theme
     const saved = getSavedTheme()
-    const savedThemeString = localStorage.getItem('app-theme') || 'default'
-    setCurrentTheme(savedThemeString)
-    
-    // Apply theme on mount
+    setCurrentTheme(localStorage.getItem('app-theme') || 'default')
     applyTheme(saved.themeId, saved.mode)
     setTheme(saved.mode)
 
-    // Load additional settings from localStorage
-    const storedSettings = localStorage.getItem('arcana_settings')
-    if (storedSettings) {
-      try {
-        const parsed = JSON.parse(storedSettings)
-        setSettings(prev => ({ ...prev, ...parsed }))
-      } catch (e) {
-        console.error('Failed to parse stored settings', e)
-      }
-    }
+    fetchSettings()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const handleThemeChange = (themeId: string) => {
-    const baseId = getThemeBaseId(themeId) as ThemeId
-    const currentMode = theme === 'dark' ? 'dark' : 'light'
-    
-    applyTheme(baseId, currentMode)
-    setTheme(currentMode)
-    setCurrentTheme(themeId)
-    
-    toast({
-      title: 'Theme Updated',
-      description: `Switched to ${baseId} theme`,
-    })
-  }
-
   const fetchSettings = async () => {
+    const supabase = createClient()
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
       if (!user) return
 
       const { data, error } = await supabase
         .from('users')
-        .select('*')
+        .select('full_name, wake_time, sleep_time, work_hours_start, work_hours_end, email')
         .eq('id', user.id)
         .single()
 
-      if (error && error.code !== 'PGRST116') {
-        // PGRST116 is "not found" - we'll create the profile
-        throw error
-      }
+      // PGRST116 = row not found; we'll create one on save.
+      if (error && error.code !== 'PGRST116') throw error
 
       if (data) {
-        const settingsData = data as any
-        setSettings(prev => ({
-          ...prev,
-          wake_time: settingsData.wake_time || '07:00',
-          sleep_time: settingsData.sleep_time || '23:00',
-          work_hours_start: settingsData.work_hours_start || '09:00',
-          work_hours_end: settingsData.work_hours_end || '17:00',
-          full_name: settingsData.full_name,
-        }))
-      } else {
-        // Create user profile if doesn't exist
-        const { data: newUser, error: createError } = await supabase
-          .from('users')
-          .insert({
-            id: user.id,
-            email: user.email || '',
-            full_name: null,
-            wake_time: '07:00',
-            sleep_time: '23:00',
-            work_hours_start: '09:00',
-            work_hours_end: '17:00',
-          })
-          .select()
-          .single()
-
-        if (createError) {
-          console.error('Error creating user profile:', createError)
-        } else if (newUser) {
-          setSettings(prev => ({
-            ...prev,
-            wake_time: newUser.wake_time || '07:00',
-            sleep_time: newUser.sleep_time || '23:00',
-            work_hours_start: newUser.work_hours_start || '09:00',
-            work_hours_end: newUser.work_hours_end || '17:00',
-            full_name: newUser.full_name,
-          }))
-        }
+        setSettings({
+          full_name: data.full_name,
+          wake_time: data.wake_time || DEFAULT_SETTINGS.wake_time,
+          sleep_time: data.sleep_time || DEFAULT_SETTINGS.sleep_time,
+          work_hours_start: data.work_hours_start || DEFAULT_SETTINGS.work_hours_start,
+          work_hours_end: data.work_hours_end || DEFAULT_SETTINGS.work_hours_end,
+        })
       }
-    } catch (error: any) {
-      console.error('Error fetching settings:', error)
+    } catch (err) {
+      console.error('Failed to load settings:', err)
     } finally {
       setLoading(false)
     }
@@ -207,73 +104,33 @@ export default function SettingsPage() {
 
   const handleSave = async () => {
     setSaving(true)
+    const supabase = createClient()
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
       if (!user) throw new Error('Not authenticated')
 
-      // Check if user exists, create if not
-      const { data: existingUser } = await supabase
-        .from('users')
-        .select('id')
-        .eq('id', user.id)
-        .single()
-
-      let error
-      if (existingUser) {
-        // Update existing user
-        const result = await supabase
-          .from('users')
-          .update({
-            wake_time: settings.wake_time,
-            sleep_time: settings.sleep_time,
-            work_hours_start: settings.work_hours_start,
-            work_hours_end: settings.work_hours_end,
-            full_name: settings.full_name?.trim() || null,
-          })
-          .eq('id', user.id)
-        error = result.error
-      } else {
-        // Create new user profile
-        const result = await supabase
-          .from('users')
-          .insert({
-            id: user.id,
-            email: user.email || '',
-            full_name: settings.full_name?.trim() || null,
-            wake_time: settings.wake_time,
-            sleep_time: settings.sleep_time,
-            work_hours_start: settings.work_hours_start,
-            work_hours_end: settings.work_hours_end,
-          })
-        error = result.error
-      }
-
+      // Upsert handles both first-save (no row yet) and subsequent updates.
+      const { error } = await supabase.from('users').upsert(
+        {
+          id: user.id,
+          email: user.email || '',
+          full_name: settings.full_name?.trim() || null,
+          wake_time: settings.wake_time,
+          sleep_time: settings.sleep_time,
+          work_hours_start: settings.work_hours_start,
+          work_hours_end: settings.work_hours_end,
+        },
+        { onConflict: 'id' }
+      )
       if (error) throw error
 
-      // Save additional settings to localStorage
-      const settingsToStore = {
-        notifications_enabled: settings.notifications_enabled,
-        email_notifications: settings.email_notifications,
-        task_reminders: settings.task_reminders,
-        habit_reminders: settings.habit_reminders,
-        ai_model: settings.ai_model,
-        ai_temperature: settings.ai_temperature,
-        auto_save: settings.auto_save,
-        compact_mode: settings.compact_mode,
-        sound_enabled: settings.sound_enabled,
-        language: settings.language,
-        timezone: settings.timezone,
-      }
-      localStorage.setItem('arcana_settings', JSON.stringify(settingsToStore))
-
+      toast({ title: 'Saved', description: 'Your preferences are up to date.' })
+    } catch (err: any) {
       toast({
-        title: 'Settings Saved',
-        description: 'Your preferences have been updated successfully.',
-      })
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to save settings',
+        title: 'Could not save',
+        description: err?.message || 'Something went wrong.',
         variant: 'destructive',
       })
     } finally {
@@ -281,665 +138,260 @@ export default function SettingsPage() {
     }
   }
 
-  const handleClearData = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
+  const handleThemeChange = (themeId: string) => {
+    const baseId = getThemeBaseId(themeId) as ThemeId
+    const mode = theme === 'dark' ? 'dark' : 'light'
+    applyTheme(baseId, mode)
+    setTheme(mode)
+    setCurrentTheme(themeId)
+  }
 
-      // Clear local storage
-      localStorage.clear()
-      
-      toast({
-        title: 'Data Cleared',
-        description: 'Local data has been cleared. Please refresh the page.',
-      })
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to clear data',
-        variant: 'destructive',
-      })
+  const setColorMode = (mode: 'light' | 'dark' | 'system') => {
+    const baseId = getThemeBaseId(currentTheme) as ThemeId
+    setTheme(mode)
+    if (mode !== 'system') applyTheme(baseId, mode)
+  }
+
+  const clearLocalCache = () => {
+    // Preserve auth + theme so the user doesn't get bounced to login or flashed
+    // back to a default theme they didn't pick.
+    const preserve = ['app-theme', 'app-theme-mode']
+    const kept: Record<string, string> = {}
+    for (const key of preserve) {
+      const v = localStorage.getItem(key)
+      if (v !== null) kept[key] = v
     }
+    // Keep Supabase auth cookies/keys
+    const allKeys = Object.keys(localStorage)
+    for (const key of allKeys) {
+      if (key.startsWith('sb-')) {
+        const v = localStorage.getItem(key)
+        if (v !== null) kept[key] = v
+      }
+    }
+    localStorage.clear()
+    for (const [k, v] of Object.entries(kept)) localStorage.setItem(k, v)
+    toast({
+      title: 'Local cache cleared',
+      description: 'Refresh the page to start fresh.',
+    })
   }
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="flex items-center justify-center min-h-[300px]">
+        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
       </div>
     )
   }
 
   return (
-    <div className="space-y-4 md:space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="space-y-6 max-w-3xl">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Settings</h1>
-          <p className="text-muted-foreground mt-1 text-sm md:text-base">
-            Manage your preferences and customize your Arcana experience
+          <h1 className="text-3xl font-semibold tracking-tight">Settings</h1>
+          <p className="text-muted-foreground mt-1">
+            Preferences that actually do something. Save when you&apos;re done.
           </p>
         </div>
-        <Button onClick={handleSave} disabled={saving} className="gap-2 w-full sm:w-auto">
+        <Button onClick={handleSave} disabled={saving}>
           {saving ? (
             <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Saving...
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Saving…
             </>
           ) : (
             <>
-              <Save className="h-4 w-4" />
-              Save All Changes
+              <Save className="mr-2 h-4 w-4" />
+              Save changes
             </>
           )}
         </Button>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 md:space-y-6">
-        <div className="overflow-x-auto -mx-4 md:mx-0 px-4 md:px-0">
-          <TabsList className="inline-flex w-auto min-w-full md:grid md:w-full md:grid-cols-6">
-          <TabsTrigger value="appearance" className="gap-2">
-            <Palette className="h-4 w-4" />
-            Appearance
-          </TabsTrigger>
-          <TabsTrigger value="notifications" className="gap-2">
-            <Bell className="h-4 w-4" />
-            Notifications
-          </TabsTrigger>
-          <TabsTrigger value="ai" className="gap-2">
-            <Brain className="h-4 w-4" />
-            AI Settings
-          </TabsTrigger>
-          <TabsTrigger value="preferences" className="gap-2">
-            <Settings className="h-4 w-4" />
-            Preferences
-          </TabsTrigger>
-          <TabsTrigger value="privacy" className="gap-2">
-            <Shield className="h-4 w-4" />
-            Privacy
-          </TabsTrigger>
-          <TabsTrigger value="advanced" className="gap-2">
-            <Zap className="h-4 w-4" />
-            Advanced
-          </TabsTrigger>
-          </TabsList>
-        </div>
-
-        {/* Appearance Tab */}
-        <TabsContent value="appearance" className="space-y-6">
-          <div className="grid gap-6 md:grid-cols-2">
-            <Card className="md:col-span-2">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Palette className="h-5 w-5" />
-                  Theme Selection
-                </CardTitle>
-                <CardDescription>Choose your visual theme</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <ThemeSelector
-                  currentTheme={currentTheme}
-                  onThemeChange={handleThemeChange}
-                />
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Color Mode</CardTitle>
-                <CardDescription>Light, dark, or system preference</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex flex-col gap-3">
-                  <Button
-                    variant={theme === 'light' ? 'default' : 'outline'}
-                    className="w-full justify-start"
-                    onClick={() => {
-                      const baseId = getThemeBaseId(currentTheme) as ThemeId
-                      setTheme('light')
-                      applyTheme(baseId, 'light')
-                    }}
-                  >
-                    <Sun className="h-4 w-4 mr-2" />
-                    Light Mode
-                  </Button>
-                  <Button
-                    variant={theme === 'dark' ? 'default' : 'outline'}
-                    className="w-full justify-start"
-                    onClick={() => {
-                      const baseId = getThemeBaseId(currentTheme) as ThemeId
-                      setTheme('dark')
-                      applyTheme(baseId, 'dark')
-                    }}
-                  >
-                    <Moon className="h-4 w-4 mr-2" />
-                    Dark Mode
-                  </Button>
-                  <Button
-                    variant={theme === 'system' ? 'default' : 'outline'}
-                    className="w-full justify-start"
-                    onClick={() => setTheme('system')}
-                  >
-                    <Monitor className="h-4 w-4 mr-2" />
-                    System Default
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Display Options</CardTitle>
-                <CardDescription>Customize how content is displayed</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label htmlFor="compact-mode">Compact Mode</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Reduce spacing for more content
-                    </p>
-                  </div>
-                  <Switch
-                    id="compact-mode"
-                    checked={settings.compact_mode}
-                    onCheckedChange={(checked) =>
-                      setSettings({ ...settings, compact_mode: checked })
-                    }
-                  />
-                </div>
-                <Separator />
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label htmlFor="sound">Sound Effects</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Play sounds for actions
-                    </p>
-                  </div>
-                  <Switch
-                    id="sound"
-                    checked={settings.sound_enabled}
-                    onCheckedChange={(checked) =>
-                      setSettings({ ...settings, sound_enabled: checked })
-                    }
-                  />
-                </div>
-              </CardContent>
-            </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Profile</CardTitle>
+          <CardDescription>
+            How Arcana addresses you. Used in greetings and AI prompts.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2 max-w-sm">
+            <Label htmlFor="full_name">Display name</Label>
+            <Input
+              id="full_name"
+              value={settings.full_name || ''}
+              onChange={(e) => setSettings({ ...settings, full_name: e.target.value })}
+              placeholder="e.g. Alex Morgan"
+            />
           </div>
-        </TabsContent>
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/dashboard/settings/profile">Edit full profile</Link>
+          </Button>
+        </CardContent>
+      </Card>
 
-        {/* Notifications Tab */}
-        <TabsContent value="notifications" className="space-y-6">
-          <div className="grid gap-6 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Bell className="h-5 w-5" />
-                  Notification Settings
-                </CardTitle>
-                <CardDescription>Control how you receive notifications</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Enable Notifications</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Receive browser notifications
-                    </p>
-                  </div>
-                  <Switch
-                    checked={settings.notifications_enabled}
-                    onCheckedChange={(checked) =>
-                      setSettings({ ...settings, notifications_enabled: checked })
-                    }
-                  />
-                </div>
-                <Separator />
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Email Notifications</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Receive updates via email
-                    </p>
-                  </div>
-                  <Switch
-                    checked={settings.email_notifications}
-                    onCheckedChange={(checked) =>
-                      setSettings({ ...settings, email_notifications: checked })
-                    }
-                  />
-                </div>
-                <Separator />
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Task Reminders</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Get reminded about upcoming tasks
-                    </p>
-                  </div>
-                  <Switch
-                    checked={settings.task_reminders}
-                    onCheckedChange={(checked) =>
-                      setSettings({ ...settings, task_reminders: checked })
-                    }
-                  />
-                </div>
-                <Separator />
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Habit Reminders</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Daily reminders for habit tracking
-                    </p>
-                  </div>
-                  <Switch
-                    checked={settings.habit_reminders}
-                    onCheckedChange={(checked) =>
-                      setSettings({ ...settings, habit_reminders: checked })
-                    }
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Clock className="h-5 w-5" />
-                  Reminder Timing
-                </CardTitle>
-                <CardDescription>When to send reminders</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Default Reminder Time</Label>
-                  <Input type="time" defaultValue="09:00" />
-                  <p className="text-xs text-muted-foreground">
-                    Default time for daily reminders
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Daily schedule</CardTitle>
+          <CardDescription>
+            The AI coach plans your day around these hours.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-2xl">
+            <div className="space-y-2">
+              <Label htmlFor="wake_time">Wake</Label>
+              <Input
+                id="wake_time"
+                type="time"
+                value={settings.wake_time}
+                onChange={(e) => setSettings({ ...settings, wake_time: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="sleep_time">Sleep</Label>
+              <Input
+                id="sleep_time"
+                type="time"
+                value={settings.sleep_time}
+                onChange={(e) => setSettings({ ...settings, sleep_time: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="work_start">Work start</Label>
+              <Input
+                id="work_start"
+                type="time"
+                value={settings.work_hours_start}
+                onChange={(e) =>
+                  setSettings({ ...settings, work_hours_start: e.target.value })
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="work_end">Work end</Label>
+              <Input
+                id="work_end"
+                type="time"
+                value={settings.work_hours_end}
+                onChange={(e) =>
+                  setSettings({ ...settings, work_hours_end: e.target.value })
+                }
+              />
+            </div>
           </div>
-        </TabsContent>
+        </CardContent>
+      </Card>
 
-        {/* AI Settings Tab */}
-        <TabsContent value="ai" className="space-y-6">
-          <div className="grid gap-6 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Brain className="h-5 w-5" />
-                  AI Model Settings
-                </CardTitle>
-                <CardDescription>Configure Arcana AI behavior</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="ai-model">AI Model</Label>
-                  <Select
-                    value={settings.ai_model}
-                    onValueChange={(value) =>
-                      setSettings({ ...settings, ai_model: value })
-                    }
-                  >
-                    <SelectTrigger id="ai-model">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="gpt-4">GPT-4 (Recommended)</SelectItem>
-                      <SelectItem value="gpt-4-turbo">GPT-4 Turbo</SelectItem>
-                      <SelectItem value="gpt-3.5-turbo">GPT-3.5 Turbo (Faster)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">
-                    Higher models are smarter but slower
-                  </p>
-                </div>
-                <Separator />
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <Label>Creativity Level</Label>
-                    <Badge variant="outline">{settings.ai_temperature}</Badge>
-                  </div>
-                  <Slider
-                    value={[settings.ai_temperature]}
-                    onValueChange={([value]) =>
-                      setSettings({ ...settings, ai_temperature: value })
-                    }
-                    min={0}
-                    max={1}
-                    step={0.1}
-                    className="w-full"
-                  />
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>Focused</span>
-                    <span>Creative</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Lower = more consistent, Higher = more creative
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Appearance</CardTitle>
+          <CardDescription>Theme and light/dark mode.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <ThemeSelector currentTheme={currentTheme} onThemeChange={handleThemeChange} />
 
-            <Card>
-              <CardHeader>
-                <CardTitle>AI Preferences</CardTitle>
-                <CardDescription>Customize AI responses</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Auto-save AI Conversations</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Automatically save chat history
-                    </p>
-                  </div>
-                  <Switch
-                    checked={settings.auto_save}
-                    onCheckedChange={(checked) =>
-                      setSettings({ ...settings, auto_save: checked })
-                    }
-                  />
-                </div>
-              </CardContent>
-            </Card>
+          <Separator />
+
+          <div>
+            <Label className="block mb-2 text-sm font-medium">Mode</Label>
+            <div className="flex gap-2 flex-wrap">
+              <Button
+                variant={theme === 'light' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setColorMode('light')}
+              >
+                <Sun className="mr-2 h-3.5 w-3.5" /> Light
+              </Button>
+              <Button
+                variant={theme === 'dark' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setColorMode('dark')}
+              >
+                <Moon className="mr-2 h-3.5 w-3.5" /> Dark
+              </Button>
+              <Button
+                variant={theme === 'system' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setColorMode('system')}
+              >
+                <Monitor className="mr-2 h-3.5 w-3.5" /> System
+              </Button>
+            </div>
           </div>
-        </TabsContent>
+        </CardContent>
+      </Card>
 
-        {/* Preferences Tab */}
-        <TabsContent value="preferences" className="space-y-6">
-          <div className="grid gap-6 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Clock className="h-5 w-5" />
-                  Daily Schedule
-                </CardTitle>
-                <CardDescription>Set your daily routine preferences</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="wake_time">Wake Time</Label>
-                    <Input
-                      id="wake_time"
-                      type="time"
-                      value={settings.wake_time}
-                      onChange={(e) =>
-                        setSettings({ ...settings, wake_time: e.target.value })
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="sleep_time">Sleep Time</Label>
-                    <Input
-                      id="sleep_time"
-                      type="time"
-                      value={settings.sleep_time}
-                      onChange={(e) =>
-                        setSettings({ ...settings, sleep_time: e.target.value })
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="work_start">Work Start</Label>
-                    <Input
-                      id="work_start"
-                      type="time"
-                      value={settings.work_hours_start}
-                      onChange={(e) =>
-                        setSettings({
-                          ...settings,
-                          work_hours_start: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="work_end">Work End</Label>
-                    <Input
-                      id="work_end"
-                      type="time"
-                      value={settings.work_hours_end}
-                      onChange={(e) =>
-                        setSettings({
-                          ...settings,
-                          work_hours_end: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Bell className="h-4 w-4" /> Notifications
+          </CardTitle>
+          <CardDescription>
+            Browser reminders for upcoming tasks. Managed on its own page so the
+            permission flow stays clean.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button variant="outline" asChild>
+            <Link href="/dashboard/settings/notifications">Open notification settings</Link>
+          </Button>
+        </CardContent>
+      </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Globe className="h-5 w-5" />
-                  Localization
-                </CardTitle>
-                <CardDescription>Language and regional settings</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="language">Language</Label>
-                  <Select
-                    value={settings.language}
-                    onValueChange={(value) =>
-                      setSettings({ ...settings, language: value })
-                    }
-                  >
-                    <SelectTrigger id="language">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="en">English</SelectItem>
-                      <SelectItem value="es">Spanish</SelectItem>
-                      <SelectItem value="fr">French</SelectItem>
-                      <SelectItem value="de">German</SelectItem>
-                      <SelectItem value="ja">Japanese</SelectItem>
-                      <SelectItem value="zh">Chinese</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="timezone">Timezone</Label>
-                  <Select
-                    value={settings.timezone}
-                    onValueChange={(value) =>
-                      setSettings({ ...settings, timezone: value })
-                    }
-                  >
-                    <SelectTrigger id="timezone">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="America/New_York">Eastern Time (ET)</SelectItem>
-                      <SelectItem value="America/Chicago">Central Time (CT)</SelectItem>
-                      <SelectItem value="America/Denver">Mountain Time (MT)</SelectItem>
-                      <SelectItem value="America/Los_Angeles">Pacific Time (PT)</SelectItem>
-                      <SelectItem value="Europe/London">London (GMT)</SelectItem>
-                      <SelectItem value="Europe/Paris">Paris (CET)</SelectItem>
-                      <SelectItem value="Asia/Tokyo">Tokyo (JST)</SelectItem>
-                      <SelectItem value="Asia/Shanghai">Shanghai (CST)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <User className="h-5 w-5" />
-                  Profile
-                </CardTitle>
-                <CardDescription>Your personal information</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="full_name">Full Name</Label>
-                  <Input
-                    id="full_name"
-                    value={settings.full_name || ''}
-                    onChange={(e) =>
-                      setSettings({ ...settings, full_name: e.target.value })
-                    }
-                    placeholder="Enter your full name"
-                    className="dark:bg-gray-800"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    This name will appear in greetings and throughout the app
-                  </p>
-                </div>
-                <Link href="/dashboard/settings/profile">
-                  <Button variant="outline" className="w-full">
-                    <User className="mr-2 h-4 w-4" />
-                    Edit Full Profile
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Your data</CardTitle>
+          <CardDescription>Export, import, or wipe local cache.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex gap-2 flex-wrap">
+            <ExportDialog />
+            <Button variant="outline" asChild>
+              <Link href="/dashboard/settings/data">
+                <Upload className="mr-2 h-4 w-4" />
+                Import
+              </Link>
+            </Button>
           </div>
-        </TabsContent>
+          <p className="text-xs text-muted-foreground">
+            Export everything — tasks, habits, notes, courses — as JSON or CSV.
+          </p>
+        </CardContent>
+      </Card>
 
-        {/* Privacy Tab */}
-        <TabsContent value="privacy" className="space-y-6">
-          <div className="grid gap-6 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Shield className="h-5 w-5" />
-                  Privacy Settings
-                </CardTitle>
-                <CardDescription>Control your data privacy</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Analytics</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Help improve Arcana with usage data
-                    </p>
-                  </div>
-                  <Switch defaultChecked />
-                </div>
-                <Separator />
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Error Reporting</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Automatically report errors
-                    </p>
-                  </div>
-                  <Switch defaultChecked />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Eye className="h-5 w-5" />
-                  Data Visibility
-                </CardTitle>
-                <CardDescription>Control what others can see</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="p-4 bg-muted rounded-lg">
-                  <p className="text-sm text-muted-foreground">
-                    All your data is private by default. Only you can access your tasks, habits, and notes.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        {/* Advanced Tab */}
-        <TabsContent value="advanced" className="space-y-6">
-          <div className="grid gap-6 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Database className="h-5 w-5" />
-                  Data Management
-                </CardTitle>
-                <CardDescription>Export, import, or manage your data</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <ExportDialog />
-                <Separator />
-                <div className="space-y-2">
-                  <Button variant="outline" className="w-full" asChild>
-                    <Link href="/dashboard/settings/data">
-                      <Upload className="mr-2 h-4 w-4" />
-                      Import Data
-                    </Link>
-                  </Button>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Export all your tasks, habits, notes, and courses as JSON or CSV.
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Keyboard className="h-5 w-5" />
-                  Keyboard Shortcuts
-                </CardTitle>
-                <CardDescription>View available keyboard shortcuts</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <p className="text-sm text-muted-foreground">
-                    Press <kbd className="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700">⌘K</kbd> or <kbd className="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700">Ctrl+K</kbd> to open the command palette with all shortcuts.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-destructive">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-destructive">
-                  <AlertTriangle className="h-5 w-5" />
-                  Danger Zone
-                </CardTitle>
-                <CardDescription>Irreversible actions</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="destructive" className="w-full">
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Clear Local Data
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Clear Local Data?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        This will clear all locally stored preferences and cache. Your account data will remain safe.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleClearData}>
-                        Clear Data
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-      </Tabs>
+      <Card className="border-destructive/50">
+        <CardHeader>
+          <CardTitle className="text-lg text-destructive">Danger zone</CardTitle>
+          <CardDescription>Things you usually don&apos;t want to undo.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="outline" className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive">
+                <Trash2 className="mr-2 h-4 w-4" />
+                Clear local cache
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Clear local cache?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Wipes locally stored preferences (templates, gamification XP, dismissed nudges).
+                  Your account, tasks, and notes on the server stay untouched. You&apos;ll stay
+                  signed in.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={clearLocalCache}>Clear</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </CardContent>
+      </Card>
     </div>
   )
 }
