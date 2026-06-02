@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast'
 import { Habit } from '@/lib/types'
 import { formatDate } from '@/lib/utils'
 import { Progress } from '@/components/ui/progress'
+import { rewardHabitCompletion } from '@/lib/gamification-actions'
 
 export default function HabitsPage() {
   const [habits, setHabits] = useState<Habit[]>([])
@@ -21,6 +22,7 @@ export default function HabitsPage() {
 
   useEffect(() => {
     fetchHabits()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const fetchHabits = async () => {
@@ -89,6 +91,7 @@ export default function HabitsPage() {
 
       const updated = await response.json()
       setHabits(habits.map((h) => (h.id === habit.id ? updated : h)))
+      rewardHabitCompletion()
 
       toast({
         title: 'Great job!',
@@ -133,8 +136,27 @@ export default function HabitsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="h-9 w-32 bg-gray-200 dark:bg-gray-800 rounded animate-pulse mb-2" />
+            <div className="h-5 w-64 bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
+          </div>
+          <div className="h-10 w-32 bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <Card key={i} className="h-48">
+              <CardHeader>
+                <div className="h-6 w-3/4 bg-gray-200 dark:bg-gray-800 rounded animate-pulse mb-2" />
+                <div className="h-4 w-1/2 bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
+              </CardHeader>
+              <CardContent>
+                <div className="h-10 w-full bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
     )
   }
@@ -187,11 +209,20 @@ export default function HabitsPage() {
 
       {habits.length === 0 ? (
         <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Target className="h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-muted-foreground text-center">
-              No habits yet. Create your first habit to start tracking!
+          <CardContent className="flex flex-col items-center justify-center py-16 px-6">
+            <div className="p-4 rounded-full bg-primary/10 w-fit mb-6">
+              <Target className="h-16 w-16 text-primary" />
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
+              No habits yet
+            </h3>
+            <p className="text-muted-foreground text-center max-w-md mb-6">
+              Start building better routines by creating your first habit. Track your progress and build consistency over time.
             </p>
+            <Button onClick={() => setDialogOpen(true)} size="lg">
+              <Plus className="mr-2 h-5 w-5" />
+              Create Your First Habit
+            </Button>
           </CardContent>
         </Card>
       ) : (

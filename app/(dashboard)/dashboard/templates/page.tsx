@@ -7,6 +7,16 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Plus, Copy, Trash2, Loader2 } from 'lucide-react'
 import { useTemplateStore, TaskTemplate } from '@/stores/use-template-store'
@@ -19,6 +29,8 @@ export default function TemplatesPage() {
   const deleteTemplate = useTemplateStore((state) => state.deleteTemplate)
   const duplicateTemplate = useTemplateStore((state) => state.duplicateTemplate)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [templateToDelete, setTemplateToDelete] = useState<string | null>(null)
   const [editingTemplate, setEditingTemplate] = useState<TaskTemplate | null>(null)
   const [formData, setFormData] = useState({
     name: '',
@@ -76,14 +88,21 @@ export default function TemplatesPage() {
     setDialogOpen(true)
   }
 
-  const handleDelete = (id: string) => {
-    if (confirm('Are you sure you want to delete this template?')) {
-      deleteTemplate(id)
-      toast({
-        title: 'Success',
-        description: 'Template deleted successfully',
-      })
-    }
+  const handleDeleteClick = (id: string) => {
+    setTemplateToDelete(id)
+    setDeleteDialogOpen(true)
+  }
+
+  const handleDelete = () => {
+    if (!templateToDelete) return
+    
+    deleteTemplate(templateToDelete)
+    toast({
+      title: 'Success',
+      description: 'Template deleted successfully',
+    })
+    setDeleteDialogOpen(false)
+    setTemplateToDelete(null)
   }
 
   const handleDuplicate = (id: string) => {
@@ -259,7 +278,7 @@ export default function TemplatesPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handleDelete(template.id)}
+                    onClick={() => handleDeleteClick(template.id)}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -269,6 +288,24 @@ export default function TemplatesPage() {
           ))}
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Template</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this template? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

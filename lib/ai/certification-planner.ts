@@ -169,7 +169,7 @@ Generate the complete study plan with daily study items.`
     return {
       cert_id,
       cert_name,
-      total_hours,
+      total_hours: totalHours,
       weeks_to_completion: weeksNeeded,
       study_schedule: generateFallbackSchedule(modules, start_date, hours_per_week),
       weekly_breakdown: [],

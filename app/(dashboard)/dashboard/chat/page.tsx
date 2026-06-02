@@ -1,10 +1,11 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
-import { Brain, Save, Sparkles } from 'lucide-react'
+import { Save } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import {
   Dialog,
@@ -45,6 +46,8 @@ interface ChatConversation {
 }
 
 export default function ChatPage() {
+  const searchParams = useSearchParams()
+  const seededRef = useRef(false)
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -56,13 +59,33 @@ export default function ChatPage() {
   const [loadingConversations, setLoadingConversations] = useState(true)
   const [loadingMessages, setLoadingMessages] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [pageContext, setPageContext] = useState<{
+    cert_id?: string
+    module_id?: string
+  }>({})
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const { toast } = useToast()
 
-  // Load conversations on mount
   useEffect(() => {
     fetchConversations()
   }, [])
+
+  useEffect(() => {
+    if (seededRef.current) return
+    const prompt = searchParams.get('prompt')
+    const certId = searchParams.get('cert_id')
+    const moduleId = searchParams.get('module_id')
+    const ctx: { cert_id?: string; module_id?: string } = {}
+    if (certId) ctx.cert_id = certId
+    if (moduleId) ctx.module_id = moduleId
+    if (Object.keys(ctx).length > 0) setPageContext(ctx)
+    if (prompt) {
+      setInput(prompt)
+      seededRef.current = true
+    } else if (Object.keys(ctx).length > 0) {
+      seededRef.current = true
+    }
+  }, [searchParams])
 
   // Load messages when conversation changes
   useEffect(() => {
@@ -72,6 +95,7 @@ export default function ChatPage() {
       setMessages([])
       setCurrentMode('chat')
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversationId])
 
   useEffect(() => {
@@ -190,6 +214,7 @@ export default function ChatPage() {
         body: JSON.stringify({
           message: userMessage,
           conversation_id: conversationId,
+          context: Object.keys(pageContext).length > 0 ? pageContext : undefined,
         }),
       })
 
@@ -335,40 +360,29 @@ export default function ChatPage() {
 
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="space-y-2 mb-4 md:mb-6"
-        >
+        <div className="mb-4 md:mb-6">
           <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 md:gap-4 flex-1 min-w-0">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
               <MobileChatToggle
                 isOpen={sidebarOpen}
                 onToggle={() => setSidebarOpen(!sidebarOpen)}
                 className="md:hidden"
               />
-              <motion.div
-                whileHover={{ scale: 1.1, rotate: 5 }}
-                className="hidden sm:block p-2 md:p-3 rounded-xl md:rounded-2xl bg-gradient-to-br from-primary/20 to-secondary/20 shadow-lg flex-shrink-0"
-              >
-                <Brain className="h-6 w-6 md:h-10 md:w-10 text-primary" />
-              </motion.div>
               <div className="min-w-0 flex-1">
-                <h1 className="text-2xl md:text-4xl font-bold tracking-tight gradient-text truncate">
-                  Chat with Arcana
+                <h1 className="text-2xl md:text-3xl font-semibold tracking-tight truncate">
+                  Chat
                 </h1>
-                <p className="text-muted-foreground text-sm md:text-lg hidden sm:block">
-                  Your AI learning mentor and assistant ✨
+                <p className="text-sm text-muted-foreground hidden sm:block">
+                  Ask Arcana anything — it adapts to what you need.
                 </p>
               </div>
             </div>
             {conversationId && messages.length > 0 && (
               <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button variant="outline" size="sm" className="shimmer-button hidden sm:inline-flex">
+                  <Button variant="outline" size="sm" className="hidden sm:inline-flex">
                     <Save className="mr-2 h-4 w-4" />
-                    <span className="hidden md:inline">Save to Notes</span>
+                    <span className="hidden md:inline">Save to notes</span>
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
@@ -387,17 +401,17 @@ export default function ChatPage() {
               </Dialog>
             )}
           </div>
-        </motion.div>
+        </div>
 
-        {/* Chat Messages */}
-        <Card className="flex-1 flex flex-col overflow-hidden mb-2 md:mb-4 glow-card border-2">
-          <CardHeader className="pb-2 md:pb-3 border-b bg-muted/30 px-3 md:px-6">
+        <Card className="flex-1 flex flex-col overflow-hidden mb-2 md:mb-4">
+          <CardHeader className="pb-2 md:pb-3 border-b px-3 md:px-6">
             <div className="flex items-center justify-between gap-2">
-              <CardTitle className="text-base md:text-lg font-bold">Conversation</CardTitle>
-              {currentMode && (
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Conversation
+              </CardTitle>
+              {currentMode && currentMode !== 'chat' && (
                 <Badge variant="outline" className={cn(getModeColor(currentMode), "text-xs")}>
-                  <Sparkles className="mr-1 md:mr-2 h-3 w-3" />
-                  <span className="capitalize hidden sm:inline">{currentMode} Mode</span>
+                  <span className="capitalize">{currentMode}</span>
                 </Badge>
               )}
             </div>
@@ -407,12 +421,7 @@ export default function ChatPage() {
               <div className="p-3 md:p-6 min-h-full">
                 {loadingMessages ? (
                   <div className="flex items-center justify-center h-full min-h-[400px]">
-                    <div className="text-center space-y-4">
-                      <div className="inline-block p-4 rounded-full bg-primary/10">
-                        <Brain className="h-8 w-8 text-primary animate-pulse" />
-                      </div>
-                      <p className="text-muted-foreground">Loading conversation...</p>
-                    </div>
+                    <p className="text-sm text-muted-foreground">Loading…</p>
                   </div>
                 ) : messages.length === 0 ? (
                   <ChatEmptyState onPromptClick={(prompt) => setInput(prompt)} />
@@ -438,15 +447,14 @@ export default function ChatPage() {
           </CardContent>
         </Card>
 
-        {/* Input */}
-        <Card className="glow-card border-2">
+        <Card>
           <CardContent className="p-2 md:p-4">
             <ChatInput
               value={input}
               onChange={setInput}
               onSubmit={sendMessage}
               loading={loading}
-              placeholder="Ask Arcana anything... (Learning, tasks, or just chat!)"
+              placeholder="Ask Arcana anything…"
               suggestions={suggestions}
               onSuggestionClick={(suggestion) => setInput(suggestion)}
             />

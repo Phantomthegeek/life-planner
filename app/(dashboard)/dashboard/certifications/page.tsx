@@ -4,10 +4,20 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
-import { BookOpen, Calendar, Loader2, Plus, Brain, Sparkles, Search, Trash2 } from 'lucide-react'
+import { BookOpen, Calendar, Loader2, Plus, Search, Trash2 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import Link from 'next/link'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -34,10 +44,13 @@ export default function CertificationsPage() {
   const [certName, setCertName] = useState('')
   const [aiLoading, setAiLoading] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [certToDelete, setCertToDelete] = useState<{ id: string; name: string } | null>(null)
   const { toast } = useToast()
 
   useEffect(() => {
     fetchCertifications()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const fetchCertifications = async () => {
@@ -85,13 +98,16 @@ export default function CertificationsPage() {
     }
   }
 
-  const handleDeleteCertification = async (certId: string, certName: string) => {
-    if (!confirm(`Are you sure you want to delete "${certName}"? This will also delete all associated progress and modules.`)) {
-      return
-    }
+  const handleDeleteClick = (certId: string, certName: string) => {
+    setCertToDelete({ id: certId, name: certName })
+    setDeleteDialogOpen(true)
+  }
+
+  const handleDeleteCertification = async () => {
+    if (!certToDelete) return
 
     try {
-      const response = await fetch(`/api/certifications?id=${certId}`, {
+      const response = await fetch(`/api/certifications?id=${certToDelete.id}`, {
         method: 'DELETE',
       })
 
@@ -105,6 +121,8 @@ export default function CertificationsPage() {
         description: 'Course deleted successfully',
       })
 
+      setDeleteDialogOpen(false)
+      setCertToDelete(null)
       fetchCertifications()
     } catch (error: any) {
       toast({
@@ -218,20 +236,17 @@ export default function CertificationsPage() {
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-primary" />
-                AI-Powered Course Adder
-              </DialogTitle>
+              <DialogTitle>Add a course</DialogTitle>
               <DialogDescription>
-                Enter a course name and AI will generate all the details for you!
+                Type a course name. Arcana fills in the rest — description, difficulty, slug.
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-4">
+            <div className="space-y-4 py-2">
               <div className="space-y-2">
-                <Label htmlFor="cert-name">Course Name</Label>
+                <Label htmlFor="cert-name">Course name</Label>
                 <Input
                   id="cert-name"
-                  placeholder="e.g., AWS Solutions Architect, Cisco CCNA"
+                  placeholder="e.g. AWS Solutions Architect, Cisco CCNA"
                   value={certName}
                   onChange={(e) => setCertName(e.target.value)}
                   onKeyDown={(e) => {
@@ -240,9 +255,6 @@ export default function CertificationsPage() {
                     }
                   }}
                 />
-                <p className="text-sm text-muted-foreground">
-                  AI will automatically generate the description, difficulty, and slug.
-                </p>
               </div>
               <Button
                 onClick={handleAIGenerate}
@@ -252,13 +264,10 @@ export default function CertificationsPage() {
                 {aiLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    AI is generating...
+                    Generating…
                   </>
                 ) : (
-                  <>
-                    <Brain className="mr-2 h-4 w-4" />
-                    Generate & Add Course
-                  </>
+                  'Generate & add'
                 )}
               </Button>
             </div>
@@ -328,7 +337,7 @@ export default function CertificationsPage() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => handleDeleteCertification(cert.id, cert.name)}
+                        onClick={() => handleDeleteClick(cert.id, cert.name)}
                         className="text-destructive hover:text-destructive hover:bg-destructive/10"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -377,7 +386,7 @@ export default function CertificationsPage() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => handleDeleteCertification(cert.id, cert.name)}
+                      onClick={() => handleDeleteClick(cert.id, cert.name)}
                       className="text-destructive hover:text-destructive hover:bg-destructive/10"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -389,6 +398,24 @@ export default function CertificationsPage() {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Course</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete &quot;{certToDelete?.name}&quot;? This will also delete all associated progress and modules. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteCertification} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

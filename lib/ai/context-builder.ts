@@ -61,7 +61,7 @@ export async function buildContextBundle(
   // Get user preferences
   const { data: user } = await supabase
     .from('users')
-    .select('wake_time, sleep_time, work_hours_start, work_hours_end, timezone')
+    .select('wake_time, sleep_time, work_hours_start, work_hours_end, timezone, created_at')
     .eq('id', userId)
     .single()
 
@@ -271,8 +271,10 @@ export async function buildContextBundle(
     
     progress_context: {
       certification_progress: certProgress || [],
-      active_projects: projects || [],
-      active_goals: goals || [],
+      // DB returns `status` as a generic string column; cast to our narrowed
+      // application types since the column is constrained by app logic.
+      active_projects: (projects || []) as unknown as Project[],
+      active_goals: (goals || []) as unknown as Goal[],
       upcoming_deadlines: upcomingTasks || [],
       project_milestones: [], // Can be populated from milestones table
     },

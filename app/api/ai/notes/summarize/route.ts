@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import type { Json } from '@/lib/supabase/database.types'
 import { createClient } from '@/lib/supabase/server'
 import { summarizeNote } from '@/lib/ai/notes-summarizer'
 
@@ -59,7 +60,7 @@ export async function POST(request: NextRequest) {
         type: 'note_summary',
         note_id: note_id || null,
       },
-      response: summary,
+      response: summary as unknown as Json,
     })
 
     return NextResponse.json(summary)

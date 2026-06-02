@@ -4,6 +4,7 @@
  */
 
 import OpenAI from 'openai'
+import { arcanaCore } from './personality'
 
 // Lazy initialization to avoid build-time errors
 function getOpenAIClient(): OpenAI {
@@ -129,7 +130,7 @@ Return ONLY valid JSON in this exact structure:
       messages: [
         {
           role: 'system',
-          content: 'You are an expert educational content creator. Always respond with valid JSON only, no markdown formatting.',
+          content: `${arcanaCore()}\n\nRight now you are writing lesson content for the user. Be concrete, use real examples, and avoid stock textbook phrasing. Always respond with valid JSON only, no markdown formatting.`,
         },
         {
           role: 'user',
@@ -212,7 +213,7 @@ Return ONLY valid JSON in this structure:
       messages: [
         {
           role: 'system',
-          content: 'You are an expert curriculum designer. Always respond with valid JSON only.',
+          content: `${arcanaCore()}\n\nRight now you are designing a lesson plan for the user. Build a clean, progressive sequence. Always respond with valid JSON only.`,
         },
         {
           role: 'user',

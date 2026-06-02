@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { generateCertificationStudyPlan } from '@/lib/ai/certification-planner'
+import type { Json } from '@/lib/supabase/database.types'
 
 // Force dynamic route - prevents build-time analysis issues
 export const dynamic = 'force-dynamic'
@@ -67,7 +68,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     const startDate = start_date || new Date().toISOString().split('T')[0]
-    const targetDate = progress?.target_date || null
+    const targetDate = progress?.target_date || undefined
 
     // Generate study plan
     const studyPlan = await generateCertificationStudyPlan({
@@ -85,7 +86,8 @@ export async function POST(request: NextRequest) {
       start_date: startDate,
     })
 
-    // Save AI query
+    // Save AI query. Supabase typings require `Json`-compatible values; our domain
+    // types are JSON-serializable but lack an index signature, so cast through unknown.
     await supabase.from('ai_queries').insert({
       user_id: user.id,
       prompt: {
@@ -93,7 +95,7 @@ export async function POST(request: NextRequest) {
         cert_id,
         hours_per_week,
       },
-      response: studyPlan,
+      response: studyPlan as unknown as Json,
     })
 
     return NextResponse.json(studyPlan)

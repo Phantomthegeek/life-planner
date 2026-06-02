@@ -84,7 +84,6 @@ export async function POST(
       throw new Error('Module not found')
     }
 
-    // Generate lesson structure
     const structure = await generateLessonStructure(
       module.title,
       module.description,
@@ -117,7 +116,7 @@ export async function POST(
       try {
         const content = await generateLessonContent({
           moduleTitle: module.title,
-          moduleDescription: module.description,
+          moduleDescription: module.description ?? undefined,
           certificationName: module.certifications?.name || 'Unknown',
           difficulty: lessonData.difficulty,
           estimatedMinutes: lessonData.estimated_minutes,

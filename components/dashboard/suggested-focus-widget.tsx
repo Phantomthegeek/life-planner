@@ -1,15 +1,15 @@
 'use client'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Lightbulb, TrendingUp } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Lightbulb } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { formatDateToISO } from '@/lib/utils'
+import Link from 'next/link'
 
-// Suggested Focus widget - shows AI-recommended task based on patterns
-// Fetches today's tasks and suggests the most important one
 export function SuggestedFocusWidget() {
   const [suggestedTask, setSuggestedTask] = useState<string | null>(null)
-  const [productivityData, setProductivityData] = useState<number[]>([])
+  const [taskCount, setTaskCount] = useState(0)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -19,18 +19,14 @@ export function SuggestedFocusWidget() {
         const response = await fetch(`/api/tasks?date=${today}`)
         if (response.ok) {
           const tasks = await response.json()
-          if (Array.isArray(tasks) && tasks.length > 0) {
-            // Find the first incomplete task as suggested focus
-            const incomplete = tasks.filter((t: any) => !t.done)
+          if (Array.isArray(tasks)) {
+            setTaskCount(tasks.length)
+            const incomplete = tasks.filter((t: { done?: boolean }) => !t.done)
             if (incomplete.length > 0) {
               setSuggestedTask(incomplete[0].title)
             }
           }
         }
-
-        // Mock productivity data for visualization
-        // In a real app, this would come from analytics
-        setProductivityData([40, 60, 80, 90, 75, 65, 50])
       } catch (err) {
         console.error('Failed to load suggested focus:', err)
       } finally {
@@ -43,7 +39,7 @@ export function SuggestedFocusWidget() {
 
   if (loading) {
     return (
-      <Card className="col-span-1 border-2 border-[#FFBD44]/20 hover:border-[#FFBD44]/40 transition-colors">
+      <Card className="col-span-1 border-2 border-[#FFBD44]/20">
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
             <Lightbulb className="h-5 w-5 text-[#FFBD44]" />
@@ -51,7 +47,7 @@ export function SuggestedFocusWidget() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-32 bg-gray-100 dark:bg-gray-800 animate-pulse rounded" />
+          <div className="h-20 bg-muted animate-pulse rounded" />
         </CardContent>
       </Card>
     )
@@ -66,38 +62,30 @@ export function SuggestedFocusWidget() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div>
-          <p className="text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-            {suggestedTask || 'No tasks for today'}
-          </p>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-            {suggestedTask ? 'Based on your schedule and recent activities.' : 'Create tasks to get suggestions'}
-          </p>
-
-          {/* Simple bar chart showing productivity over week */}
-          <div className="h-24 bg-gradient-to-t from-[#FFBD44]/20 to-transparent rounded mb-2 p-3 relative border border-[#FFBD44]/10 dark:border-[#FFBD44]/20">
-            <div className="absolute bottom-0 left-0 right-0 flex items-end justify-between h-full px-2">
-              {productivityData.map((height, i) => (
-                <div
-                  key={i}
-                  className="flex-1 mx-0.5 bg-[#FFBD44] rounded-t"
-                  style={{ height: `${height}%` }}
-                />
-              ))}
-            </div>
-            <div className="absolute top-1 left-1 flex items-center gap-1">
-              <TrendingUp className="h-3 w-3 text-[#FFBD44]" />
-              <span className="text-xs font-medium text-[#FFBD44]">Productivity</span>
-            </div>
-          </div>
-
-          {suggestedTask && (
-            <p className="text-xs text-gray-600 dark:text-gray-400">
-              You&apos;ve been most productive on this project between 9-11 AM. Consider blocking
-              this time today.
+        {suggestedTask ? (
+          <>
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              {suggestedTask}
             </p>
-          )}
-        </div>
+            <p className="text-xs text-muted-foreground">
+              Your first incomplete task for today ({taskCount} total today).
+            </p>
+            <Button size="sm" className="w-full" asChild>
+              <Link href="/dashboard/planner">Open in planner</Link>
+            </Button>
+          </>
+        ) : (
+          <>
+            <p className="text-sm text-muted-foreground">
+              {taskCount === 0
+                ? 'No tasks scheduled for today.'
+                : 'All tasks for today are done — nice work!'}
+            </p>
+            <Button size="sm" variant="outline" className="w-full" asChild>
+              <Link href="/dashboard/planner">Add a task</Link>
+            </Button>
+          </>
+        )}
       </CardContent>
     </Card>
   )

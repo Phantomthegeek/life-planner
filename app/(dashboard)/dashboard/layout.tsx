@@ -6,6 +6,7 @@ import { Toaster } from '@/components/ui/toaster'
 import { CommandPalette } from '@/components/command-palette'
 import { DashboardLayoutClient } from './layout-client'
 import { KeyboardShortcutsProvider } from '@/components/dashboard/keyboard-shortcuts-provider'
+import { FloatingActionButton } from '@/components/ui/floating-action-button'
 
 export default async function DashboardLayout({
   children,
@@ -32,6 +33,7 @@ export default async function DashboardLayout({
       <CommandPalette />
       <DashboardLayoutClient />
       <KeyboardShortcutsProvider />
+      <FloatingActionButton />
     </div>
   )
 }

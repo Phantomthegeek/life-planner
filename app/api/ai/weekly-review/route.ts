@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import type { Json } from '@/lib/supabase/database.types'
 import { createClient } from '@/lib/supabase/server'
 import { generateWeeklyReview } from '@/lib/ai/notes-summarizer'
 import { formatDate, addDays, subDays } from '@/lib/utils'
@@ -64,7 +65,7 @@ export async function POST(request: NextRequest) {
         week_start: startDateStr,
         week_end: endDateStr,
       },
-      response: review,
+      response: review as unknown as Json,
     })
 
     return NextResponse.json({

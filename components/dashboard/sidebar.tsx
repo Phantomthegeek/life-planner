@@ -33,9 +33,9 @@ const primaryNavItems = [
 
 const arcanaToolsNav = [
   { href: '/dashboard/chat', label: 'AI Assistant', icon: Brain },
-  { href: '/dashboard/coach', label: 'Time Warp', icon: Clock },
-  { href: '/dashboard/projects', label: 'Arcana Connect', icon: Link2 },
-  { href: '/dashboard/planner/focus', label: 'Flow Mode', icon: Target },
+  { href: '/dashboard/coach', label: 'AI Coach', icon: Clock },
+  { href: '/dashboard/projects', label: 'Projects', icon: Link2 },
+  { href: '/dashboard/planner/focus', label: 'Focus', icon: Target },
 ]
 
 // Sidebar navigation component
@@ -61,9 +61,12 @@ export function Sidebar() {
       <Link
         key={item.href}
         href={item.href}
-        onClick={() => setMobileOpen(false)} // Close mobile menu on click
+        onClick={(e) => {
+          e.stopPropagation()
+          setMobileOpen(false)
+        }}
         className={cn(
-          'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+          'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer',
           isCurrentlyActive
             ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
             : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
@@ -97,13 +100,13 @@ export function Sidebar() {
       {/* Sidebar - mobile drawer / desktop fixed */}
       <div
         className={cn(
-          'w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 h-screen fixed left-0 top-0 flex flex-col z-30 transition-transform duration-300',
+          'w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 h-screen fixed left-0 top-0 flex flex-col z-50 transition-transform duration-300',
           mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         )}
       >
         {/* Arcana branding header */}
         <div className="p-4 md:p-6 border-b border-gray-200 dark:border-gray-800 flex-shrink-0 flex items-center justify-between">
-          <div className="text-xl md:text-2xl font-bold bg-gradient-to-r from-[#2A2D7C] to-[#9C6ADE] bg-clip-text text-transparent">
+          <div className="text-xl md:text-2xl font-semibold tracking-tight text-[#2A2D7C] dark:text-[#9C6ADE]">
             Arcana
           </div>
           <button
@@ -140,9 +143,12 @@ export function Sidebar() {
                   <Link
                     key={item.href}
                     href={item.href}
-                    onClick={() => setMobileOpen(false)}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setMobileOpen(false)
+                    }}
                     className={cn(
-                      'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                      'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer',
                       isActive
                         ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
                         : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
@@ -161,9 +167,12 @@ export function Sidebar() {
         <div className="border-t border-gray-200 dark:border-gray-800 p-4 space-y-1 flex-shrink-0">
           <Link
             href="/dashboard/settings"
-            onClick={() => setMobileOpen(false)}
+            onClick={(e) => {
+              e.stopPropagation()
+              setMobileOpen(false)
+            }}
             className={cn(
-              'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+              'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer',
               currentPath?.startsWith('/dashboard/settings')
                 ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
                 : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
@@ -173,12 +182,15 @@ export function Sidebar() {
             <span>Settings</span>
           </Link>
           <Link
-            href="/dashboard/settings"
-            onClick={() => setMobileOpen(false)}
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            href="/dashboard/statistics"
+            onClick={(e) => {
+              e.stopPropagation()
+              setMobileOpen(false)
+            }}
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
           >
             <HelpCircle className="h-5 w-5 flex-shrink-0" />
-            <span>Help & Support</span>
+            <span>Statistics</span>
           </Link>
         </div>
       </div>

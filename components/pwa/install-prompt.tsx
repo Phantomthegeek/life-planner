@@ -9,8 +9,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Download, X, Sparkles } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { Download, X, CheckCircle2 } from 'lucide-react'
+import { AnimatePresence } from 'framer-motion'
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>
@@ -84,63 +84,42 @@ export function InstallPrompt() {
     <AnimatePresence>
       {showPrompt && (
         <Dialog open={showPrompt} onOpenChange={setShowPrompt}>
-          <DialogContent className="sm:max-w-md glow-card border-2 max-h-[90vh] overflow-y-auto install-prompt-center">
+          <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto install-prompt-center">
             <DialogHeader>
-              <motion.div
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                className="flex items-center gap-3 mb-2"
-              >
-                <div className="p-2 rounded-full bg-primary/10">
-                  <Sparkles className="h-6 w-6 text-primary" />
-                </div>
-                <DialogTitle className="text-xl font-bold gradient-text">
-                  Install Arcana
-                </DialogTitle>
-              </motion.div>
-              <DialogDescription className="text-base pt-2">
-                Install our app for a better experience! Get quick access, offline support, and
-                a native app feel.
+              <DialogTitle>Install Arcana</DialogTitle>
+              <DialogDescription className="pt-2">
+                Add Arcana to your home screen for faster access and offline support.
               </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-3 pt-4">
-              <div className="space-y-2 text-sm text-muted-foreground">
-                <div className="flex items-start gap-2">
-                  <span className="text-primary">✓</span>
-                  <span>Quick access from your home screen</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="text-primary">✓</span>
+              <ul className="space-y-1.5 text-sm text-muted-foreground">
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                  <span>Launches from your home screen</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
                   <span>Works offline</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="text-primary">✓</span>
-                  <span>Faster loading times</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="text-primary">✓</span>
-                  <span>Native app experience</span>
-                </div>
-              </div>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                  <span>Faster load times</span>
+                </li>
+              </ul>
 
               <div className="flex gap-2 pt-2">
-                <Button
-                  onClick={handleInstall}
-                  className="flex-1 shimmer-button"
-                  size="lg"
-                >
+                <Button onClick={handleInstall} className="flex-1">
                   <Download className="mr-2 h-4 w-4" />
-                  Install Now
+                  Install
                 </Button>
                 <Button
                   onClick={handleDismiss}
                   variant="outline"
-                  size="lg"
                   className="flex-1"
                 >
                   <X className="mr-2 h-4 w-4" />
-                  Maybe Later
+                  Not now
                 </Button>
               </div>
             </div>

@@ -4,6 +4,17 @@ import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 import { ArrowLeft, Loader2, Edit, Trash2 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import Link from 'next/link'
@@ -22,10 +33,12 @@ export default function ProjectDetailPage() {
   const projectId = params.id as string
   const [loading, setLoading] = useState(true)
   const [project, setProject] = useState<Project | null>(null)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const { toast } = useToast()
 
   useEffect(() => {
     fetchProject()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId])
 
   const fetchProject = async () => {
@@ -47,8 +60,6 @@ export default function ProjectDetailPage() {
   }
 
   const handleDelete = async () => {
-    if (!confirm('Are you sure you want to delete this project?')) return
-
     try {
       const response = await fetch(`/api/projects?id=${projectId}`, {
         method: 'DELETE',
@@ -61,6 +72,7 @@ export default function ProjectDetailPage() {
         description: 'Project deleted successfully',
       })
 
+      setDeleteDialogOpen(false)
       router.push('/dashboard/projects')
     } catch (error: any) {
       toast({
@@ -118,10 +130,28 @@ export default function ProjectDetailPage() {
             <Edit className="mr-2 h-4 w-4" />
             Edit
           </Button>
-          <Button variant="outline" size="sm" onClick={handleDelete} className="text-destructive hover:text-destructive">
-            <Trash2 className="mr-2 h-4 w-4" />
-            Delete
-          </Button>
+          <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+            <AlertDialogTrigger asChild>
+              <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete Project</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to delete &quot;{project.name}&quot;? This action cannot be undone and will delete all associated tasks.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </div>
 

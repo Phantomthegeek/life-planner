@@ -62,17 +62,23 @@ const nextConfig = {
   images: {
     domains: [],
   },
-  typescript: {
-    // !! WARN !!
-    // Dangerously allow production builds to successfully complete even if
-    // your project has type errors.
-    // !! WARN !!
-    ignoreBuildErrors: true,
-  },
-  eslint: {
-    // Warning: This allows production builds to successfully complete even if
-    // your project has ESLint errors.
-    ignoreDuringBuilds: true,
+  webpack: (config, { dev }) => {
+    // Avoid EMFILE: too many open files on macOS by skipping huge directories
+    // that don't need to be watched in dev.
+    if (dev) {
+      config.watchOptions = {
+        ...(config.watchOptions || {}),
+        ignored: [
+          '**/.git/**',
+          '**/node_modules/**',
+          '**/.next/**',
+          '**/public/**',
+        ],
+        aggregateTimeout: 200,
+        poll: false,
+      };
+    }
+    return config;
   },
 };
 

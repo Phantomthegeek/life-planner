@@ -66,7 +66,24 @@ export function NotificationManager({
     upcomingTasks.forEach((task) => {
       if (!task.start_ts) return
 
-      const timeoutId = scheduleTaskNotification(task, settings.minutesBefore)
+      // Check for task-specific reminder setting
+      let taskReminderMinutes = settings.minutesBefore
+      try {
+        if (task.detail && task.detail.startsWith('{')) {
+          const detailObj = JSON.parse(task.detail)
+          if (detailObj.reminderMinutes === 0 || detailObj.reminderMinutes === 'none' || detailObj.reminderMinutes === null) {
+            // No reminder for this task
+            return
+          }
+          if (typeof detailObj.reminderMinutes === 'number' && detailObj.reminderMinutes > 0) {
+            taskReminderMinutes = detailObj.reminderMinutes
+          }
+        }
+      } catch {
+        // If parsing fails, use default
+      }
+
+      const timeoutId = scheduleTaskNotification(task, taskReminderMinutes)
       if (timeoutId) {
         scheduledNotifications.current.set(task.id, timeoutId)
       }
@@ -77,12 +94,14 @@ export function NotificationManager({
   useEffect(() => {
     scheduleNotifications()
 
-    // Cleanup on unmount
+    // Capture ref into a local so the cleanup uses the same Map instance the
+    // effect ran with — avoids the React lint warning about ref-in-cleanup.
+    const notifications = scheduledNotifications.current
     return () => {
-      scheduledNotifications.current.forEach((timeoutId) => {
+      notifications.forEach((timeoutId) => {
         cancelNotification(timeoutId)
       })
-      scheduledNotifications.current.clear()
+      notifications.clear()
     }
   }, [scheduleNotifications, cancelNotification])
 

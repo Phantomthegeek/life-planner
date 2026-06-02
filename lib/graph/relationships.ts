@@ -108,7 +108,7 @@ export async function getTaskRelations(
   // Find related tasks (same project, category, or similar patterns)
   const { data: relatedTasks } = await supabase
     .from('tasks')
-    .select('id, title, category, project_id')
+    .select('id, title, category, project_id, duration_minutes')
     .eq('user_id', userId)
     .neq('id', taskId)
     .eq('done', false)
@@ -191,8 +191,9 @@ export async function getTaskRelations(
     .single()
 
   if (patterns && relations.time_patterns) {
-    const bestHours = patterns.pattern_data?.best_hours || []
-    const optimalHours = bestHours.map((h: any) => h.hour)
+    const data = (patterns.pattern_data ?? {}) as { best_hours?: Array<{ hour: number }> }
+    const bestHours = data.best_hours || []
+    const optimalHours = bestHours.map((h) => h.hour)
     relations.time_patterns.optimal_hours = optimalHours
   }
 

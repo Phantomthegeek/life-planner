@@ -3,10 +3,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Plus, Clock, Trash2, MessageSquare, BookOpen, Target, Sparkles, Loader2 } from 'lucide-react'
+import { Plus, Clock, Trash2, MessageSquare, BookOpen, Target, Loader2 } from 'lucide-react'
 import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
-import { motion } from 'framer-motion'
 
 interface Conversation {
   id: string
@@ -40,36 +39,19 @@ export function ConversationSidebar({
       case 'task':
         return <Target className="h-4 w-4" />
       case 'chat':
+      default:
         return <MessageSquare className="h-4 w-4" />
-      default:
-        return <Sparkles className="h-4 w-4" />
-    }
-  }
-
-  const getModeColor = (mode: string) => {
-    switch (mode) {
-      case 'learning':
-        return 'text-blue-500'
-      case 'task':
-        return 'text-green-500'
-      case 'chat':
-        return 'text-purple-500'
-      default:
-        return 'text-yellow-500'
     }
   }
 
   return (
-    <Card className="h-full flex flex-col glow-card">
+    <Card className="h-full flex flex-col">
       <CardHeader className="pb-3 border-b">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg font-bold gradient-text">Conversations</CardTitle>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onNew}
-            className="shimmer-button"
-          >
+          <CardTitle className="text-sm font-medium text-muted-foreground">
+            Conversations
+          </CardTitle>
+          <Button variant="ghost" size="sm" onClick={onNew} aria-label="New conversation">
             <Plus className="h-4 w-4" />
           </Button>
         </div>
@@ -78,45 +60,34 @@ export function ConversationSidebar({
         <ScrollArea className="h-full">
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
           ) : conversations.length === 0 ? (
-            <div className="p-6 text-center">
-              <div className="p-3 rounded-full bg-primary/10 w-fit mx-auto mb-3">
-                <MessageSquare className="h-6 w-6 text-primary" />
-              </div>
-              <p className="text-sm font-medium mb-1">No conversations yet</p>
-              <p className="text-xs text-muted-foreground">
-                Start a new chat to begin!
-              </p>
+            <div className="p-6 text-center text-sm text-muted-foreground">
+              No conversations yet. Start one to see it here.
             </div>
           ) : (
-            <div className="divide-y divide-border/50">
-              {conversations.map((conv, index) => (
-                <motion.button
+            <div className="divide-y divide-border">
+              {conversations.map((conv) => (
+                <button
                   key={conv.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.05 }}
                   onClick={() => onSelect(conv.id)}
                   className={cn(
-                    'w-full text-left p-4 transition-all duration-200 relative group',
+                    'w-full text-left p-3 transition-colors relative group',
                     selectedId === conv.id
-                      ? 'bg-primary/10 border-l-4 border-primary'
-                      : 'hover:bg-muted/50'
+                      ? 'bg-muted/60 border-l-2 border-foreground'
+                      : 'hover:bg-muted/30'
                   )}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className={cn('flex-shrink-0', getModeColor(conv.mode))}>
-                          {getModeIcon(conv.mode)}
-                        </div>
-                        <p className="font-semibold text-sm truncate">
-                          {conv.title || 'New Conversation'}
+                      <div className="flex items-center gap-2 mb-1 text-muted-foreground">
+                        {getModeIcon(conv.mode)}
+                        <p className="font-medium text-sm truncate text-foreground">
+                          {conv.title || 'New conversation'}
                         </p>
                       </div>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground pl-6">
                         <Clock className="h-3 w-3 flex-shrink-0" />
                         <span>{format(new Date(conv.updated_at), 'MMM d, h:mm a')}</span>
                       </div>
@@ -124,16 +95,14 @@ export function ConversationSidebar({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className={cn(
-                        'h-6 w-6 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity',
-                        'hover:bg-destructive/10 hover:text-destructive'
-                      )}
+                      className="h-6 w-6 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/10 hover:text-destructive"
                       onClick={(e) => onDelete(conv.id, e)}
+                      aria-label="Delete conversation"
                     >
                       <Trash2 className="h-3 w-3" />
                     </Button>
                   </div>
-                </motion.button>
+                </button>
               ))}
             </div>
           )}

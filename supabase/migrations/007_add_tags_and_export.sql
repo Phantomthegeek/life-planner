@@ -1,8 +1,13 @@
 -- Migration: Add Task Tags and Enhancements
 -- Run this in Supabase SQL Editor
+-- SAFE to re-run: every statement is guarded against already-existing objects.
 
--- Add tags column to tasks table
-alter table public.tasks 
+-- ============================================
+-- 1. TASK TAGS
+-- ============================================
+
+-- Add tags column to tasks table (no-op if column exists)
+alter table public.tasks
 add column if not exists tags text[] default '{}';
 
 -- Create tags table for tag management
@@ -15,42 +20,53 @@ create table if not exists public.tags (
   unique(user_id, name)
 );
 
--- Create index for faster tag queries
+-- Indexes
 create index if not exists idx_tasks_tags on public.tasks using gin(tags);
 create index if not exists idx_tags_user on public.tags(user_id);
 
--- Enable RLS for tags
+-- RLS
 alter table public.tags enable row level security;
 
+drop policy if exists "Users can manage their own tags" on public.tags;
 create policy "Users can manage their own tags" on public.tags
   for all using (auth.uid() = user_id);
 
--- Add export_logs table for tracking exports
+-- ============================================
+-- 2. EXPORT LOGS
+-- ============================================
+
 create table if not exists public.export_logs (
   id uuid primary key default gen_random_uuid(),
   user_id uuid references public.users(id) on delete cascade not null,
   export_type text not null, -- 'json', 'csv', 'pdf'
-  data_type text not null, -- 'tasks', 'notes', 'habits', 'all'
+  data_type text not null,   -- 'tasks', 'notes', 'habits', 'all'
   file_path text,
   created_at timestamptz default now()
 );
 
 alter table public.export_logs enable row level security;
 
+drop policy if exists "Users can view their own export logs" on public.export_logs;
 create policy "Users can view their own export logs" on public.export_logs
   for select using (auth.uid() = user_id);
 
--- Add calendar sync settings
+-- ============================================
+-- 3. CALENDAR INTEGRATIONS
+-- Note: migration 003 already creates this table, its RLS, and the
+-- set_updated_at_calendar_integrations trigger. We only add what's missing
+-- (an extra-permissive policy) without conflicting with what's already there.
+-- ============================================
+
 create table if not exists public.calendar_integrations (
   id uuid primary key default gen_random_uuid(),
   user_id uuid references public.users(id) on delete cascade not null,
-  provider text not null, -- 'google', 'outlook', 'ical'
+  provider text not null,
   access_token text,
   refresh_token text,
   calendar_id text,
   sync_enabled boolean default true,
   last_sync_at timestamptz,
-  sync_direction text default 'two_way', -- 'two_way', 'import', 'export'
+  sync_direction text default 'two_way',
   created_at timestamptz default now(),
   updated_at timestamptz default now(),
   unique(user_id, provider)
@@ -58,11 +74,19 @@ create table if not exists public.calendar_integrations (
 
 alter table public.calendar_integrations enable row level security;
 
+drop policy if exists "Users can manage their own calendar integrations" on public.calendar_integrations;
 create policy "Users can manage their own calendar integrations" on public.calendar_integrations
   for all using (auth.uid() = user_id);
 
--- Update updated_at trigger for calendar_integrations
-create trigger set_updated_at_calendar_integrations
-  before update on public.calendar_integrations
-  for each row execute procedure public.handle_updated_at();
-
+-- updated_at trigger (skip if already created by migration 003)
+do $$
+begin
+  if not exists (
+    select 1 from pg_trigger
+    where tgname = 'set_updated_at_calendar_integrations'
+  ) then
+    create trigger set_updated_at_calendar_integrations
+      before update on public.calendar_integrations
+      for each row execute procedure public.handle_updated_at();
+  end if;
+end$$;

@@ -13,6 +13,7 @@ import {
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import { GlobalSearch } from '@/components/search/global-search'
 
 // Top header bar - responsive for mobile
 export function Header() {
@@ -84,18 +85,9 @@ export function Header() {
 
   return (
     <div className="h-16 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 fixed top-0 right-0 left-0 md:left-64 z-40 flex items-center justify-between px-4 md:px-6">
-      {/* Search bar - hidden on very small screens */}
+      {/* Global Search - hidden on very small screens */}
       <div className="hidden sm:flex flex-1 max-w-md">
-        <div className="relative w-full">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <Input
-            type="text"
-            placeholder="Search..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-10 w-full"
-          />
-        </div>
+        <GlobalSearch />
       </div>
 
       {/* Right side controls */}
@@ -126,11 +118,25 @@ export function Header() {
             <span className="hidden sm:inline text-sm font-medium text-gray-700 dark:text-gray-300">{name}</span>
             <ChevronDown className="h-4 w-4 text-gray-400 hidden sm:block" />
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem onClick={() => router.push('/dashboard/settings')}>
+          <DropdownMenuContent align="end" className="w-48 z-[60]">
+            <DropdownMenuItem 
+              onClick={(e) => {
+                e.preventDefault()
+                router.push('/dashboard/settings')
+              }}
+              className="cursor-pointer"
+            >
               Settings
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={logout}>Logout</DropdownMenuItem>
+            <DropdownMenuItem 
+              onClick={(e) => {
+                e.preventDefault()
+                logout()
+              }}
+              className="cursor-pointer"
+            >
+              Logout
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

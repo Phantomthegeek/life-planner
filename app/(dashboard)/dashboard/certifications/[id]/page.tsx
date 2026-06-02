@@ -5,8 +5,18 @@ import { useParams } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { EnhancedProgress, CircularProgress } from '@/components/progress/enhanced-progress'
-import { BookOpen, Calendar, CheckCircle2, Circle, Loader2, ArrowLeft, Plus, Brain, Edit, Trash2, Sparkles, Clock, GraduationCap, Zap } from 'lucide-react'
+import { BookOpen, Calendar, CheckCircle2, Circle, Loader2, ArrowLeft, Plus, Brain, Edit, Trash2, Clock, GraduationCap, Zap } from 'lucide-react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -59,11 +69,37 @@ export default function CertificationDetailPage() {
   const [targetDate, setTargetDate] = useState('')
   const [examDate, setExamDate] = useState('')
   const [aiGenerating, setAiGenerating] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [moduleToDelete, setModuleToDelete] = useState<string | null>(null)
+  const [totalLessons, setTotalLessons] = useState(0)
+  const [completedLessons, setCompletedLessons] = useState(0)
   const { toast } = useToast()
 
   useEffect(() => {
     fetchCertificationDetails()
+    refreshLessonProgress()
+    const onFocus = () => refreshLessonProgress()
+    window.addEventListener('focus', onFocus)
+    return () => window.removeEventListener('focus', onFocus)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [certId])
+
+  const refreshLessonProgress = async () => {
+    try {
+      const res = await fetch(`/api/certifications/${certId}/lessons`)
+      if (!res.ok) return
+      const lessonsData: Array<{ id: string }> = await res.json()
+      setTotalLessons(lessonsData.length)
+      if (typeof window !== 'undefined') {
+        const raw = window.localStorage.getItem(`arcana-cert-completed-${certId}`)
+        const done: string[] = raw ? JSON.parse(raw) : []
+        const validDone = lessonsData.filter((l) => done.includes(l.id)).length
+        setCompletedLessons(validDone)
+      }
+    } catch {
+      /* ignore */
+    }
+  }
 
   const fetchCertificationDetails = async () => {
     try {
@@ -223,11 +259,16 @@ export default function CertificationDetailPage() {
     }
   }
 
-  const handleDeleteModule = async (moduleId: string) => {
-    if (!confirm('Are you sure you want to delete this module?')) return
+  const handleDeleteClick = (moduleId: string) => {
+    setModuleToDelete(moduleId)
+    setDeleteDialogOpen(true)
+  }
+
+  const handleDeleteModule = async () => {
+    if (!moduleToDelete) return
 
     try {
-      const response = await fetch(`/api/certifications/${certId}/modules/${moduleId}`, {
+      const response = await fetch(`/api/certifications/${certId}/modules/${moduleToDelete}`, {
         method: 'DELETE',
       })
 
@@ -238,6 +279,8 @@ export default function CertificationDetailPage() {
         description: 'Module deleted successfully',
       })
 
+      setDeleteDialogOpen(false)
+      setModuleToDelete(null)
       fetchModules()
     } catch (error: any) {
       toast({
@@ -308,7 +351,6 @@ export default function CertificationDetailPage() {
 
   const currentProgress = progress?.progress || 0
   const totalModules = modules.length
-  const completedModules = Math.round((currentProgress / 100) * totalModules)
 
   return (
     <div className="space-y-6">
@@ -324,26 +366,20 @@ export default function CertificationDetailPage() {
         </div>
       </div>
 
-      {/* Main Action - Start Learning */}
-      <Card className="border-2 shadow-xl bg-gradient-to-br from-primary/5 to-secondary/5">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div className="flex-1">
-              <h2 className="text-2xl font-bold mb-2 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-                Ready to Learn?
-              </h2>
-              <p className="text-muted-foreground">
-                Access interactive lessons, quizzes, flashcards, and AI-powered tutoring
-              </p>
-            </div>
-            <Link href={`/dashboard/certifications/${certId}/learn`}>
-              <Button size="lg" className="bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 text-white shadow-lg hover:shadow-xl transition-all">
-                <GraduationCap className="mr-2 h-5 w-5" />
-                Start Learning
-                <Zap className="ml-2 h-5 w-5" />
-              </Button>
-            </Link>
+      <Card>
+        <CardContent className="p-5 flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <h2 className="text-lg font-semibold">Start learning</h2>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Lessons, quick quizzes, and AI tutoring in one view.
+            </p>
           </div>
+          <Link href={`/dashboard/certifications/${certId}/learn`}>
+            <Button>
+              <GraduationCap className="mr-2 h-4 w-4" />
+              Open learn view
+            </Button>
+          </Link>
         </CardContent>
       </Card>
 
@@ -410,32 +446,27 @@ export default function CertificationDetailPage() {
                 <span>Exam: {new Date(progress.exam_date).toLocaleDateString()}</span>
               </div>
             )}
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => updateProgress(Math.max(0, currentProgress - 5))}
-              >
-                -5%
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => updateProgress(Math.min(100, currentProgress + 5))}
-              >
-                +5%
-              </Button>
-            </div>
+            <p className="text-xs text-muted-foreground">
+              Progress updates automatically as you complete lessons in the learn view.
+            </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Modules</CardTitle>
+            <CardTitle>Lessons</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{completedModules} / {totalModules}</div>
-            <p className="text-sm text-muted-foreground">Modules completed</p>
+            <div className="text-3xl font-bold">
+              {completedLessons} / {totalLessons || '—'}
+            </div>
+            <p className="text-sm text-muted-foreground">
+              {totalLessons === 0
+                ? 'No lessons generated yet'
+                : completedLessons === totalLessons && totalLessons > 0
+                ? 'All lessons completed'
+                : 'Lessons completed'}
+            </p>
           </CardContent>
         </Card>
 
@@ -525,8 +556,8 @@ export default function CertificationDetailPage() {
             <div className="space-y-3">
               {modules
                 .sort((a, b) => a.order_idx - b.order_idx)
-                .map((module, idx) => {
-                  const isCompleted = idx < completedModules
+                .map((module) => {
+                  const isCompleted = false
                   return (
                     <div
                       key={module.id}
@@ -558,7 +589,7 @@ export default function CertificationDetailPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent>
-                          <DropdownMenuItem onClick={() => handleDeleteModule(module.id)}>
+                          <DropdownMenuItem onClick={() => handleDeleteClick(module.id)}>
                             <Trash2 className="mr-2 h-4 w-4" />
                             Delete
                           </DropdownMenuItem>
@@ -638,6 +669,24 @@ export default function CertificationDetailPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Module Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Module</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this module? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteModule} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

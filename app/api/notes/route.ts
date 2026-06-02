@@ -70,7 +70,6 @@ export async function POST(request: NextRequest) {
         user_id: user.id,
         date,
         content,
-        category: body.category || null,
       })
       .select()
       .single()
@@ -107,10 +106,9 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Note ID is required' }, { status: 400 })
     }
 
-    const updateData: any = {}
+    const updateData: { content?: string; date?: string } = {}
     if (content !== undefined) updateData.content = content
     if (date !== undefined) updateData.date = date
-    if (body.category !== undefined) updateData.category = body.category
 
     const { data, error } = await supabase
       .from('notes')
