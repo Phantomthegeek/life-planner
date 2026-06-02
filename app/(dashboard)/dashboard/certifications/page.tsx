@@ -207,8 +207,11 @@ export default function CertificationsPage() {
     )
   })
 
+  // A cert is "in progress" the moment the user clicks Start (we insert a
+  // progress row at 0%). "Available" is anything they haven't touched yet.
   const activeCerts = filteredCerts.filter((c) => c.progress && c.progress.progress < 100)
-  const availableCerts = filteredCerts.filter((c) => !c.progress || c.progress.progress === 0)
+  const availableCerts = filteredCerts.filter((c) => !c.progress)
+  const completedCerts = filteredCerts.filter((c) => c.progress && c.progress.progress === 100)
 
   if (loading) {
     return (
@@ -351,20 +354,11 @@ export default function CertificationsPage() {
         </div>
       )}
 
-      <div className="space-y-4">
-        <h2 className="text-2xl font-semibold">
-          {activeCerts.length > 0 ? 'Available Courses' : 'Courses'}
-        </h2>
-        {availableCerts.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <BookOpen className="h-12 w-12 text-muted-foreground mb-4" />
-              <p className="text-muted-foreground text-center">
-                No courses available. Check back later!
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
+      {availableCerts.length > 0 && (
+        <div className="space-y-4">
+          <h2 className="text-2xl font-semibold">
+            {activeCerts.length > 0 ? 'Available Courses' : 'Courses'}
+          </h2>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {availableCerts.map((cert) => (
               <Card key={cert.id}>
@@ -396,8 +390,49 @@ export default function CertificationsPage() {
               </Card>
             ))}
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {completedCerts.length > 0 && (
+        <div className="space-y-4">
+          <h2 className="text-2xl font-semibold">Completed</h2>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {completedCerts.map((cert) => (
+              <Card key={cert.id}>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <BookOpen className="h-5 w-5 text-green-500" />
+                    {cert.name}
+                  </CardTitle>
+                  <CardDescription>{cert.description || 'No description'}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Link href={`/dashboard/certifications/${cert.id}`}>
+                    <Button variant="outline" className="w-full">
+                      Review
+                    </Button>
+                  </Link>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {activeCerts.length === 0 && availableCerts.length === 0 && completedCerts.length === 0 && (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <BookOpen className="h-12 w-12 text-muted-foreground mb-4" />
+            <p className="text-muted-foreground text-center mb-4">
+              No courses yet. Add one to get started.
+            </p>
+            <Button onClick={() => setAddDialogOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Course
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
