@@ -87,8 +87,11 @@ export default function CertificationDetailPage() {
   }, [certId])
 
   // Pull lessons + group by module so we can show module-level completion
-  // stats. Module is "complete" when every lesson under it is checked off in
-  // the user's local progress set.
+  // stats. Module is "complete" when every lesson under it is checked off.
+  //
+  // Completion data is fetched from the server (cert_progress_detailed) so
+  // ticks are consistent across devices. We fall back to the localStorage
+  // cache that the learn page maintains if the server is unreachable.
   const refreshLessonProgress = async () => {
     try {
       const res = await fetch(`/api/certifications/${certId}/lessons`)
@@ -96,14 +99,36 @@ export default function CertificationDetailPage() {
       const lessonsData: Array<{ id: string; module_id: string }> = await res.json()
       setTotalLessons(lessonsData.length)
 
-      const done: string[] =
-        typeof window !== 'undefined'
-          ? JSON.parse(
-              window.localStorage.getItem(`arcana-cert-completed-${certId}`) || '[]'
-            )
-          : []
-      const doneSet = new Set(done)
+      let doneIds: string[] = []
+      try {
+        const progressRes = await fetch(
+          `/api/certifications/${certId}/lesson-progress`,
+          { cache: 'no-store' }
+        )
+        if (progressRes.ok) {
+          const data = await progressRes.json().catch(() => null)
+          if (Array.isArray(data?.completed_lesson_ids)) {
+            doneIds = data.completed_lesson_ids
+          }
+        }
+      } catch {
+        /* fall through to cache */
+      }
 
+      // Offline / API failed — fall back to the learn page's localStorage
+      // cache so the stats card doesn't show 0 just because the network
+      // hiccupped.
+      if (doneIds.length === 0 && typeof window !== 'undefined') {
+        try {
+          const raw = window.localStorage.getItem(`arcana-cert-completed-${certId}`)
+          const parsed = raw ? JSON.parse(raw) : []
+          if (Array.isArray(parsed)) doneIds = parsed
+        } catch {
+          /* ignore */
+        }
+      }
+
+      const doneSet = new Set(doneIds)
       setCompletedLessons(lessonsData.filter((l) => doneSet.has(l.id)).length)
 
       // Group lessons by module, then count modules where every lesson is done.

@@ -100,7 +100,7 @@ export function QuizInterface({ questions, quizTitle, onComplete }: QuizInterfac
     return (
       <div className="max-w-2xl mx-auto">
         <Card>
-          <CardContent className="p-8 space-y-8">
+          <CardContent className="p-4 md:p-8 space-y-6 md:space-y-8">
             <div className="text-center space-y-2">
               <p className="text-sm uppercase tracking-wide text-muted-foreground">
                 {quizTitle}
@@ -200,7 +200,7 @@ export function QuizInterface({ questions, quizTitle, onComplete }: QuizInterfac
                 <span aria-hidden>·</span>
                 <span>Level {currentQuestion.difficulty_level}/5</span>
               </div>
-              <CardTitle className="text-xl leading-relaxed font-semibold">
+              <CardTitle className="text-base md:text-xl leading-relaxed font-semibold break-words">
                 {currentQuestion.question}
               </CardTitle>
             </CardHeader>
